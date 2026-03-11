@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Multi-Document Conflict Resolution RAG system — Coincidence Labs take-home assignment. The system answers questions about NVX-0228 (a fictional BRD4 inhibitor) by orchestrating multiple agents across 5 conflicting research papers. Full requirements: `takehome_agentic_document_rag.md`.
+Multi-Document Conflict Resolution RAG system — Coincidence Labs take-home assignment. The system answers questions about NVX-0228 (a fictional BRD4 inhibitor) by orchestrating multiple agents across 5 conflicting research papers. Full requirements: `docs/assignment.md`.
 
 ---
 
@@ -41,11 +41,11 @@ py -3 main.py --run-all
 py -3 main.py --ind-template
 ```
 
-### Frontend (Next.js)
+### Frontend (Next.js) — Preview the UI
 ```bash
 cd frontend
-npm install
-npm run dev        # dev server on localhost:3000
+npm install        # first time only — installs node_modules
+npm run dev        # starts dev server → open http://localhost:3000
 npm run build      # production build
 npm run test       # Jest unit + component tests
 npm run test:watch # watch mode

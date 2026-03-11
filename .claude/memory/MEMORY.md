@@ -29,6 +29,15 @@ OpenAI API key to be provided by Yannick when ready to start.
 - Thrombocytopenia: 15%→22%→41% (evolving data across trial timepoints)
 - MW: 489.1 in paper3 vs 487.3 elsewhere (paper3's salt form math is wrong — subtle)
 
+## Session State
+- Backend FULLY COMPLETE: src/, tests/ (incl. test_api.py, 24 total tests), supabase/, pytest.ini all written
+- Missing: populated outputs/ ONLY (need OpenAI API key + Supabase creds to run)
+- Frontend: COMPLETE — 4 components + 33 Jest tests, Next.js 14, Tailwind dark theme
+- README: COMPLETE
+- Conversation log: CLAUDE_SESSION_LOG.md — 12 messages, all decisions documented
+- Needs OpenAI API key from Yannick before running anything
+- See SESSION_NOTES.md for full resume checklist
+
 ## Windows Environment
 - Use `py -3` not `python3`
 - Use `pathlib.Path` for all file I/O

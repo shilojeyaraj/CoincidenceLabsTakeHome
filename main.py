@@ -19,12 +19,13 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Test queries representative of the NVX-0228 research domain
 # ---------------------------------------------------------------------------
+# Exact queries from the assignment specification
 TEST_QUERIES = [
-    "What is the IC50 of NVX-0228 for BRD4 BD1, and how does it compare to BD2 selectivity?",
-    "What are the pharmacokinetic properties of NVX-0228 at the RP2D of 200 mg BID?",
-    "What is the mechanism of action of NVX-0228 — is it a competitive or allosteric inhibitor?",
-    "What are the clinical safety and efficacy outcomes of NVX-0228 in Phase I trials?",
-    "How does the crystal structure of NVX-0228 bound to BRD4 BD1 inform its selectivity mechanism?",
+    "What is the IC50 of NVX-0228?",
+    "What toxicity was observed with NVX-0228?",
+    "What is the mechanism of action of NVX-0228?",
+    "What clinical trials have been conducted with NVX-0228?",
+    "What resistance mechanisms have been identified?",
 ]
 
 

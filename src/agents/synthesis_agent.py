@@ -115,7 +115,7 @@ class SynthesisAgent:
                     ctype = "[TABLE]" if rc.chunk.chunk_type == "table" else "[TEXT]"
                     chunks_text_parts.append(
                         f"  {ctype} section='{rc.chunk.section}' "
-                        f"page={rc.chunk.page} similarity={rc.chunk_type if hasattr(rc, 'chunk_type') else rc.similarity:.3f}\n"
+                        f"page={rc.chunk.page} similarity={rc.similarity:.3f}\n"
                         f"  {rc.chunk.content[:600]}"
                     )
                 context_parts.append("RETRIEVED CHUNKS:\n" + "\n\n".join(chunks_text_parts))
