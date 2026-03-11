@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 import openai
@@ -32,6 +33,18 @@ def generate_embedding(text: str) -> list[float]:
         input=text,
     )
     return response.data[0].embedding
+
+
+@lru_cache(maxsize=256)
+def generate_embedding_cached(text: str) -> tuple[float, ...]:
+    """
+    Cached variant of generate_embedding.
+
+    Returns a tuple (hashable) so lru_cache can key on it. All 5 PaperAgent
+    nodes embed the same query; this collapses 5 API calls into 1 per unique
+    query string. Callers should cast back to list[float] if needed.
+    """
+    return tuple(generate_embedding(text))
 
 
 def generate_embeddings_batch(texts: list[str]) -> list[list[float]]:

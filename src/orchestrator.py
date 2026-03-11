@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import operator
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Any
@@ -61,12 +62,25 @@ async def paper_node(state: dict) -> dict:
 
     Receives Send payload: {paper_id: str, query: str}
     Returns partial state update with paper_results and trace appended.
+    Gracefully degrades on exception so one failing paper never aborts the graph.
     """
     paper_id: str = state["paper_id"]
     query: str = state["query"]
 
-    agent = PaperAgent(paper_id=paper_id)
-    result, trace_step = await agent.run(query=query)
+    try:
+        agent = PaperAgent(paper_id=paper_id)
+        result, trace_step = await agent.run(query=query)
+    except Exception as exc:
+        result = PaperResult(paper_id=paper_id, chunks=[], claims=[])
+        trace_step = TraceStep(
+            step=f"paper_agent_{paper_id}",
+            agent="PaperAgent",
+            input_summary=f"query='{query[:80]}...', paper_id={paper_id}",
+            output_summary=f"ERROR: {exc}",
+            tokens_used=0,
+            latency_ms=0.0,
+            timestamp=datetime.utcnow(),
+        )
 
     return {
         "paper_results": [result],
@@ -230,14 +244,17 @@ def build_graph() -> Any:
     return builder.compile(checkpointer=checkpointer)
 
 
-# Singleton graph instance
+# Singleton graph instance with lock to prevent double-init under concurrent requests
 _graph = None
+_graph_lock = threading.Lock()
 
 
 def get_graph() -> Any:
     global _graph
     if _graph is None:
-        _graph = build_graph()
+        with _graph_lock:
+            if _graph is None:  # Double-checked locking
+                _graph = build_graph()
     return _graph
 
 

@@ -11,7 +11,9 @@
       "WebFetch(domain:docs.crewai.com)",
       "WebFetch(domain:docs.mem0.ai)",
       "WebFetch(domain:arxiv.org)",
-      "WebFetch(domain:microsoft.github.io)"
+      "WebFetch(domain:microsoft.github.io)",
+      "Bash(cd \"C:\\\\Users\\\\shilo\\\\Coincidence-Take_Home\\\\CoincidenceLabsTakeHome\" && python -m pytest --tb=short 2>&1 | tail -20)",
+      "Bash(cd \"C:\\\\Users\\\\shilo\\\\Coincidence-Take_Home\\\\CoincidenceLabsTakeHome\" && python -m pytest --tb=short -q 2>&1 | tail -10)"
     ]
   }
 }

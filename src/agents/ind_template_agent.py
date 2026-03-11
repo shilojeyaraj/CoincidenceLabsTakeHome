@@ -73,7 +73,7 @@ class INDTemplateAgent:
         subsections = section.get("subsections", [])
 
         context = self._build_context(paper_results, conflicts)
-        content = await self._call_llm(section_id, heading, guidance, subsections, context)
+        content, tokens_used = await self._call_llm(section_id, heading, guidance, subsections, context)
 
         # Parse citations from the content
         citations = list(set(re.findall(r'\[(\d+)\]', content)))
@@ -111,6 +111,7 @@ class INDTemplateAgent:
                 f"{len(citations)} citations, "
                 f"insufficient_data={insufficient_data}"
             ),
+            tokens_used=tokens_used,
             latency_ms=latency_ms,
             timestamp=datetime.utcnow(),
         )
@@ -162,8 +163,12 @@ class INDTemplateAgent:
         guidance: str,
         subsections: list[dict],
         context: str,
-    ) -> str:
-        """Call the LLM to generate IND section content."""
+    ) -> tuple[str, int]:
+        """Call the LLM to generate IND section content.
+
+        Returns:
+            (content, tokens_used)
+        """
         subsections_text = ""
         if subsections:
             sub_parts = []
@@ -189,4 +194,5 @@ class INDTemplateAgent:
             temperature=0.1,
         )
 
-        return response.choices[0].message.content or ""
+        tokens_used: int = getattr(getattr(response, "usage", None), "total_tokens", 0) or 0
+        return response.choices[0].message.content or "", tokens_used

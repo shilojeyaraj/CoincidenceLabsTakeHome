@@ -66,7 +66,7 @@ class SynthesisAgent:
         start_time = time.time()
 
         context = self._build_context(paper_results, conflicts)
-        answer = await self._call_llm(query, context)
+        answer, tokens_used = await self._call_llm(query, context)
 
         latency_ms = (time.time() - start_time) * 1000
 
@@ -83,6 +83,7 @@ class SynthesisAgent:
                 f"{len(conflicts)} conflicts [{conflict_types_str}]"
             ),
             output_summary=f"Synthesized answer ({len(answer)} chars)",
+            tokens_used=tokens_used,
             latency_ms=latency_ms,
             timestamp=datetime.utcnow(),
         )
@@ -146,8 +147,12 @@ class SynthesisAgent:
         return "\n".join(context_parts)
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    async def _call_llm(self, query: str, context: str) -> str:
-        """Call the LLM to synthesize the final answer."""
+    async def _call_llm(self, query: str, context: str) -> tuple[str, int]:
+        """Call the LLM to synthesize the final answer.
+
+        Returns:
+            (answer, tokens_used)
+        """
         user_message = (
             f"Research question: {query}\n\n"
             f"Context from {context.count('=== [Paper')}-paper corpus:\n\n"
@@ -164,4 +169,5 @@ class SynthesisAgent:
             temperature=0.2,
         )
 
-        return response.choices[0].message.content or ""
+        tokens_used: int = getattr(getattr(response, "usage", None), "total_tokens", 0) or 0
+        return response.choices[0].message.content or "", tokens_used

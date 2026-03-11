@@ -4,6 +4,7 @@ triggering context expansion for CONCEPTUAL conflicts.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 from collections import defaultdict
@@ -19,7 +20,7 @@ from src.config import (
     LLM_MODEL,
     OPENAI_API_KEY,
 )
-from src.embeddings import generate_embedding, search_paper
+from src.embeddings import generate_embedding_cached, search_paper
 from src.models import (
     Chunk,
     Conflict,
@@ -236,7 +237,9 @@ class ConflictAgent:
         CONCEPTUAL conflict and return augmented PaperResult objects.
         """
         start_time = time.time()
-        query_embedding = generate_embedding(query)
+        query_embedding = list(
+            await asyncio.to_thread(generate_embedding_cached, query)
+        )
 
         expansion_results: list[PaperResult] = []
         trace_steps: list[TraceStep] = []
@@ -246,7 +249,9 @@ class ConflictAgent:
 
         for paper_id in conflict.papers_involved:
             exp_start = time.time()
-            raw_chunks = search_paper(query_embedding, paper_id, EXPANSION_TOP_K)
+            raw_chunks = await asyncio.to_thread(
+                search_paper, query_embedding, paper_id, EXPANSION_TOP_K
+            )
 
             # Get existing retrieved chunk IDs to avoid duplicates
             existing_pr = paper_result_map.get(paper_id)

@@ -3,6 +3,7 @@ PaperAgent: retrieves and extracts structured claims from a single paper.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import time
 from datetime import datetime, date
@@ -19,7 +20,7 @@ from src.config import (
     TOP_K_PER_PAPER,
 )
 from src.db import get_client
-from src.embeddings import generate_embedding, search_paper
+from src.embeddings import generate_embedding_cached, search_paper
 from src.models import (
     Chunk,
     ExtractedClaim,
@@ -117,8 +118,10 @@ class PaperAgent:
         except Exception:
             pass  # Graceful degradation if summary not available
 
-        # --- Generate query embedding ---
-        query_embedding = generate_embedding(query)
+        # --- Generate query embedding (cached: all 5 agents share the result) ---
+        query_embedding = list(
+            await asyncio.to_thread(generate_embedding_cached, query)
+        )
 
         # --- Determine match_count ---
         if extra_count > 0:
@@ -128,8 +131,10 @@ class PaperAgent:
         else:
             match_count = TOP_K_PER_PAPER
 
-        # --- Call match_chunks RPC ---
-        raw_chunks = search_paper(query_embedding, self.paper_id, match_count)
+        # --- Call match_chunks RPC (blocking I/O → off the event loop) ---
+        raw_chunks = await asyncio.to_thread(
+            search_paper, query_embedding, self.paper_id, match_count
+        )
 
         # --- Build RetrievedChunk objects ---
         retrieved: list[RetrievedChunk] = []
@@ -156,7 +161,7 @@ class PaperAgent:
             )
 
         # --- Extract claims via LLM ---
-        claims = await self._extract_claims(retrieved, query)
+        claims, tokens_used = await self._extract_claims(retrieved, query)
 
         latency_ms = (time.time() - start_time) * 1000
 
@@ -176,7 +181,7 @@ class PaperAgent:
                 f"Retrieved {len(retrieved)} chunks, extracted {len(claims)} claims"
                 + (", EXPANDED" if expanded else "")
             ),
-            tokens_used=0,  # Updated below if LLM call succeeded
+            tokens_used=tokens_used,
             latency_ms=latency_ms,
             timestamp=datetime.utcnow(),
         )
@@ -188,10 +193,14 @@ class PaperAgent:
         self,
         retrieved: list[RetrievedChunk],
         query: str,
-    ) -> list[ExtractedClaim]:
-        """Call the LLM to extract structured claims from retrieved chunks."""
+    ) -> tuple[list[ExtractedClaim], int]:
+        """Call the LLM to extract structured claims from retrieved chunks.
+
+        Returns:
+            (claims, tokens_used) where tokens_used comes from response.usage.
+        """
         if not retrieved:
-            return []
+            return [], 0
 
         # Build chunk context for the prompt
         chunk_context_parts = []
@@ -223,6 +232,7 @@ class PaperAgent:
         )
 
         raw_content = response.choices[0].message.content or "{}"
+        tokens_used: int = getattr(getattr(response, "usage", None), "total_tokens", 0) or 0
 
         # The model may wrap the array in a key
         try:
@@ -257,4 +267,4 @@ class PaperAgent:
             except Exception:
                 continue
 
-        return claims
+        return claims, tokens_used

@@ -171,6 +171,29 @@ class TestINDTemplateEndpoint:
         assert response.status_code == 422
 
 
+class TestInputValidation:
+
+    def test_query_too_long_returns_422(self, app_client):
+        """POST /query with query > 500 chars should return 422 Unprocessable Entity."""
+        long_query = "a" * 501
+        response = app_client.post("/query", json={"query": long_query})
+        assert response.status_code == 422
+
+    def test_query_at_max_length_is_accepted(self, app_client):
+        """POST /query with exactly 500-char query should pass validation (not 422)."""
+        max_query = "a" * 500
+        fake_result = _make_query_result(max_query[:40])
+        with patch("src.api.run_query", new=AsyncMock(return_value=fake_result)):
+            response = app_client.post("/query", json={"query": max_query})
+        assert response.status_code == 200
+
+    def test_ind_template_too_long_returns_422(self, app_client):
+        """POST /ind-template with query > 500 chars should return 422."""
+        long_query = "x" * 501
+        response = app_client.post("/ind-template", json={"query": long_query})
+        assert response.status_code == 422
+
+
 class TestQueriesEndpoint:
 
     def test_queries_endpoint_returns_list(self, app_client, tmp_path, monkeypatch):

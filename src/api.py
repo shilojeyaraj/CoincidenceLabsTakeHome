@@ -51,11 +51,11 @@ async def startup_event() -> None:
 # ---------------------------------------------------------------------------
 
 class QueryRequest(BaseModel):
-    query: str = Field(..., min_length=1, description="Research question to answer")
+    query: str = Field(..., min_length=1, max_length=500, description="Research question to answer")
 
 
 class INDTemplateRequest(BaseModel):
-    query: str = Field(..., min_length=1, description="Research question for IND generation")
+    query: str = Field(..., min_length=1, max_length=500, description="Research question for IND generation")
 
 
 class HealthResponse(BaseModel):

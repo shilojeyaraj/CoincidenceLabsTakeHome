@@ -29,13 +29,15 @@ def _make_fake_embedding(dim: int = 1536) -> list[float]:
     return [0.0] * dim
 
 
-def _make_fake_chat_response(content: str) -> MagicMock:
+def _make_fake_chat_response(content: str, total_tokens: int = 150) -> MagicMock:
     """Build a mock OpenAI chat completion response."""
     choice = MagicMock()
     choice.message.content = content
+    usage = MagicMock()
+    usage.total_tokens = total_tokens
     response = MagicMock()
     response.choices = [choice]
-    response.usage.total_tokens = 150
+    response.usage = usage
     return response
 
 
