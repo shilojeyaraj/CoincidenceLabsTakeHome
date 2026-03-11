@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/shilo//**)",
+      "Read(//c/Users/shilo/Coincidence-Take_Home//**)",
+      "Bash(cp -r \"/c/Users/shilo/Downloads/RAG-home assement copy 4/RAG-home assement copy/.\" \"/c/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome/\")",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('/c/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome/data/paper1_nvx0228_novel_inhibitor.json'\\)\\); print\\('Keys:', list\\(d.keys\\(\\)\\)\\); print\\('Metadata:', json.dumps\\(d['metadata'], indent=2\\)\\); print\\('Num chunks:', len\\(d['chunks']\\)\\); print\\('First chunk:', json.dumps\\(d['chunks'][0], indent=2\\)\\)\")",
+      "Bash(python3.11 -c \"import json; d=json.load\\(open\\('/c/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome/data/paper1_nvx0228_novel_inhibitor.json'\\)\\); print\\('Keys:', list\\(d.keys\\(\\)\\)\\); print\\('Metadata:', json.dumps\\(d['metadata'], indent=2\\)\\); print\\('Num chunks:', len\\(d['chunks']\\)\\); print\\('First chunk:', json.dumps\\(d['chunks'][0], indent=2\\)\\)\" 2>/dev/null || py -3 -c \"import json; d=json.load\\(open\\('/c/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome/data/paper1_nvx0228_novel_inhibitor.json'\\)\\); print\\('Keys:', list\\(d.keys\\(\\)\\)\\); print\\('Metadata:', json.dumps\\(d['metadata'], indent=2\\)\\); print\\('Num chunks:', len\\(d['chunks']\\)\\); print\\('First chunk:', json.dumps\\(d['chunks'][0], indent=2\\)\\)\")",
+      "WebSearch",
+      "WebFetch(domain:docs.letta.com)",
+      "WebFetch(domain:docs.crewai.com)",
+      "WebFetch(domain:docs.mem0.ai)",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:microsoft.github.io)"
+    ]
+  }
+}

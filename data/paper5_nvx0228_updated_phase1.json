@@ -1,0 +1,112 @@
+{
+  "metadata": {
+    "filename": "NVX-0228_Updated_Phase1_Results_2025.pdf",
+    "title": "Safety and Efficacy of NVX-0228: Updated Phase I Results",
+    "authors": ["Rodriguez, M.", "Chen, W.", "Williams, R.", "Fernandez, A.", "Park, J.", "Osei-Bonsu, A.", "Patel, S."],
+    "publication_date": "2025-01-18",
+    "journal": "The Lancet Oncology",
+    "sample_size": 85,
+    "page_count": 16
+  },
+  "chunks": [
+    {
+      "id": "p5-chunk-001-d8e4f2a6",
+      "type": "text",
+      "content": "NVX-0228 is a selective BRD4-BD1 inhibitor in clinical development for hematologic and solid tumor malignancies. We report updated results from the Phase I dose-escalation and expansion study (NCT05123456). In an expanded patient population (n=85), NVX-0228 demonstrated an IC50 of 10.2 nM against BRD4-BD1 as determined by the validated central laboratory assay, molecular weight 487.3 g/mol. The overall response rate was 25% across all tumor types, with notable activity in AML (42% ORR) and an emerging signal in selected solid tumors. Thrombocytopenia was observed in 22% of patients (all grades), with Grade 3-4 events in 5%. Median progression-free survival was 4.8 months in AML and 2.1 months in solid tumors.",
+      "section": "Abstract",
+      "page": 0,
+      "grounding": {
+        "box": {"left": 0.05, "top": 0.08, "right": 0.95, "bottom": 0.30},
+        "page": 0
+      }
+    },
+    {
+      "id": "p5-chunk-002-a3b7c1d5",
+      "type": "text",
+      "content": "We previously reported preliminary results from the dose-escalation portion of the Phase I study of NVX-0228 (NCT05123456) in 48 patients with advanced hematologic malignancies (Chen et al., J Med Chem, 2023). Herein, we present updated safety and efficacy data from the expanded Phase I cohort, which includes an additional 37 patients enrolled in expansion cohorts at the recommended Phase II dose (RP2D) of 200 mg BID. The expansion cohorts include patients with AML (n=24), DLBCL (n=15), solid tumors (n=20), and other hematologic malignancies (n=26). The primary objectives of the expansion phase were to further characterize safety and to obtain preliminary efficacy signals.",
+      "section": "Introduction",
+      "page": 1,
+      "grounding": {
+        "box": {"left": 0.05, "top": 0.08, "right": 0.95, "bottom": 0.35},
+        "page": 1
+      }
+    },
+    {
+      "id": "p5-chunk-003-b6c9d4e8",
+      "type": "text",
+      "content": "Patients were enrolled at 12 sites across the United States and Europe between March 2022 and September 2024. Eligible patients had histologically confirmed advanced malignancies refractory to standard therapy, ECOG performance status 0-1, adequate organ function, and no prior BET inhibitor therapy. NVX-0228 was administered orally at 200 mg BID in continuous 28-day cycles. Response assessments were performed every 8 weeks using RECIST 1.1 (solid tumors) or IWG criteria (hematologic malignancies). Biochemical potency was confirmed by the central study laboratory using a validated TR-FRET assay, yielding an IC50 of 10.2 nM (95% CI: 8.4-12.4 nM).",
+      "section": "Methods",
+      "page": 2,
+      "grounding": {
+        "box": {"left": 0.05, "top": 0.08, "right": 0.95, "bottom": 0.35},
+        "page": 2
+      }
+    },
+    {
+      "id": "p5-chunk-004-c2d5e8f3",
+      "type": "text",
+      "content": "In the full evaluable population (n=85), the most common treatment-related adverse events were fatigue (35%), thrombocytopenia (22%, all grades; 5% Grade 3-4), diarrhea (18%), nausea (15%), and decreased appetite (12%). The thrombocytopenia rate of 22% represents an updated assessment with longer follow-up compared to the initial report of 15% in the dose-escalation cohort. The increase in observed thrombocytopenia is attributable to the longer treatment duration in the expansion cohort (median 4.1 cycles vs. 2.8 cycles in the initial report) and the inclusion of more heavily pretreated patients. Two patients (2.4%) discontinued treatment due to thrombocytopenia. No treatment-related deaths occurred.",
+      "section": "Results - Safety",
+      "page": 5,
+      "grounding": {
+        "box": {"left": 0.05, "top": 0.08, "right": 0.95, "bottom": 0.40},
+        "page": 5
+      }
+    },
+    {
+      "id": "p5-chunk-005-d9e1f4a7",
+      "type": "text",
+      "content": "Across the full study population, the overall response rate (ORR) was 25% (21/85), including 4 complete responses (5%) and 17 partial responses (20%). Stable disease was observed in an additional 35% of patients. The highest response rates were observed in the AML subset (ORR 42%, 10/24) and DLBCL subset (ORR 27%, 4/15). In the solid tumor cohort (n=20), the ORR was 10% (2/20), with responses observed in one patient with NUT midline carcinoma and one with triple-negative breast cancer. Median progression-free survival was 4.8 months (95% CI: 3.2-6.4) in AML and 2.1 months (95% CI: 1.4-3.0) in solid tumors.",
+      "section": "Results - Efficacy",
+      "page": 7,
+      "grounding": {
+        "box": {"left": 0.05, "top": 0.08, "right": 0.95, "bottom": 0.38},
+        "page": 7
+      }
+    },
+    {
+      "id": "p5-chunk-006-e3f6a9b2",
+      "type": "text",
+      "content": "Correlative biomarker analyses were performed on paired biopsies from 22 patients. Among 8 patients with acquired resistance (defined as initial response followed by progression), CK2-mediated phosphorylation of BRD4 was identified in 3 patients (37.5%), consistent with the S492/S498 phosphorylation resistance mechanism described by Williams et al. (Blood, 2024). Additional resistance mechanisms observed included downregulation of BRD4 expression (2/8, 25%) and activation of alternative enhancer pathways via BRD2/BRD3 compensation (2/8, 25%). One patient had no identifiable resistance mechanism.",
+      "section": "Results - Resistance Mechanisms",
+      "page": 9,
+      "grounding": {
+        "box": {"left": 0.05, "top": 0.08, "right": 0.95, "bottom": 0.35},
+        "page": 9
+      }
+    },
+    {
+      "id": "p5-chunk-007-f1a4b7c5",
+      "type": "text",
+      "content": "Population pharmacokinetic modeling using data from all 85 patients confirmed the previously reported PK profile of NVX-0228. At the RP2D of 200 mg BID, the steady-state Cmax was 1,180 ng/mL (CV = 28%), AUC0-12h was 6,840 ng\u00b7h/mL (CV = 32%), and the effective half-life was 5.5 hours. Exposure-response analyses revealed a significant correlation between steady-state AUC and both ORR (p=0.023) and thrombocytopenia risk (p=0.008), supporting therapeutic drug monitoring as a potential strategy to optimize the benefit-risk ratio.",
+      "section": "Results - Pharmacokinetics",
+      "page": 10,
+      "grounding": {
+        "box": {"left": 0.05, "top": 0.08, "right": 0.95, "bottom": 0.32},
+        "page": 10
+      }
+    },
+    {
+      "id": "p5-chunk-008-a7b2c5d9",
+      "type": "text",
+      "content": "These updated results from the Phase I study of NVX-0228 confirm the compound's favorable therapeutic profile in hematologic malignancies, particularly AML, while providing the first evidence of activity in selected solid tumors. The thrombocytopenia rate of 22% (5% Grade 3-4) in this expanded dataset is higher than our initial report but remains substantially lower than rates reported for pan-BET inhibitors (typically 40-60% all grades). The discrepancy between the IC50 values reported across different studies (ranging from 8.5 to 15.3 nM) likely reflects differences in assay format, protein construct, and laboratory-specific conditions rather than true differences in compound potency.",
+      "section": "Discussion",
+      "page": 13,
+      "grounding": {
+        "box": {"left": 0.05, "top": 0.08, "right": 0.95, "bottom": 0.38},
+        "page": 13
+      }
+    },
+    {
+      "id": "p5-chunk-009-b4c8d1e6",
+      "type": "text",
+      "content": "Several important questions remain regarding NVX-0228's mechanism and optimal clinical use. First, the debate regarding competitive versus allosteric mechanism of action (Kim et al., Nat Struct Mol Biol, 2023 vs. Chen et al., J Med Chem, 2023) has implications for resistance prediction and combination strategies. Second, the identification of CK2-mediated BRD4 phosphorylation as a resistance mechanism in both the Phase II study (Williams et al., Blood, 2024) and our Phase I expansion supports clinical evaluation of NVX-0228 in combination with CK2 inhibitors. Phase II trials in AML (NCT05345678) and DLBCL (NCT05456789) are currently enrolling.",
+      "section": "Discussion",
+      "page": 14,
+      "grounding": {
+        "box": {"left": 0.05, "top": 0.08, "right": 0.95, "bottom": 0.35},
+        "page": 14
+      }
+    }
+  ]
+}
