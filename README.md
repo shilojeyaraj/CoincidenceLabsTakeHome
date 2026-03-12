@@ -449,19 +449,20 @@ When a `CONCEPTUAL` conflict is found:
 ConflictAgent detects CONCEPTUAL conflict on "mechanism of action"
     │
     ▼
-Triggers _expand_context() for paper1 and paper4
+Triggers _expand_context() for every paper in conflict.papers_involved
     │
     ▼
-Fetches EXPANSION_TOP_K=2 additional chunks from each paper via Supabase
+Fetches EXPANSION_TOP_K=5 chunks/paper via Supabase (up from TOP_K_PER_PAPER=3)
     │
     ▼
-Deduplicates against already-retrieved chunks by chunk ID
+Deduplicates against already-retrieved chunk IDs — keeps only new chunks
+(typically 2 new per paper: 5 fetched − 3 already seen = 2 net new)
     │
     ▼
 Returns expansion PaperResults → merged into graph state via operator.add
     │
     ▼
-SynthesisAgent receives original + expansion chunks for both papers
+SynthesisAgent receives up to 5 chunks/paper instead of 3
 ```
 
 This is logged in the trace as `ConflictAgent.ContextExpansion` steps, making the adaptive behavior fully visible.
@@ -552,8 +553,9 @@ py -3 main.py --query "What is the IC50 of NVX-0228?"
 # All 5 test queries (saved to outputs/)
 py -3 main.py --run-all
 
-# With bonus IND template generation
-py -3 main.py --ind-template
+# With bonus IND template generation (must be combined with --query or --run-all)
+py -3 main.py --query "What is the mechanism of action of NVX-0228?" --ind-template
+py -3 main.py --run-all --ind-template
 
 # Start FastAPI server
 py -3 -m uvicorn src.api:app --reload --port 8000
@@ -571,15 +573,23 @@ py -3 -m pytest tests/ -v --cov=src --cov-report=term-missing
 py -3 -m pytest tests/test_conflict_agent.py -v
 ```
 
-**24 total tests across 5 files.** All LLM and Supabase calls are mocked — tests never hit external APIs.
+**54 backend tests + 34 frontend tests.** All LLM and Supabase calls are mocked — tests never hit external APIs.
 
-| File | Coverage |
-|------|---------|
-| `test_paper_agent.py` | Retrieval, claim extraction, empty results, expansion mode |
-| `test_conflict_agent.py` | IC50 → ASSAY_VARIABILITY, MoA → CONCEPTUAL, thrombocytopenia → EVOLVING_DATA, ORR → NON_CONFLICT |
-| `test_synthesis_agent.py` | All 5 papers cited, conflicts addressed, no silent winners |
-| `test_context_manager.py` | Compression trigger, warm accumulation, reset, format |
-| `test_api.py` | FastAPI endpoints, schema validation, error handling |
+| Backend file | Tests | Coverage |
+|-------------|-------|---------|
+| `test_paper_agent.py` | 8 | Retrieval, claim extraction, empty results, expansion, token counting, malformed JSON, Supabase failure |
+| `test_conflict_agent.py` | 5 | IC50 → ASSAY_VARIABILITY, MoA → CONCEPTUAL, thrombocytopenia → EVOLVING_DATA, ORR → NON_CONFLICT |
+| `test_synthesis_agent.py` | 4 | All 5 papers cited, conflicts addressed, no silent winners |
+| `test_context_manager.py` | 18 | Compression trigger, warm accumulation, reset, format, tiered access |
+| `test_api.py` | 12 | FastAPI endpoints, schema validation, 422 on bad input, max length enforcement |
+| `test_orchestrator.py` | 7 | Full graph integration: fan-out, fan-in, graceful paper failure, output file saved |
+
+| Frontend file | Tests | Coverage |
+|--------------|-------|---------|
+| `QueryBox.test.tsx` | — | Submit fires API call, loading state |
+| `ResultCard.test.tsx` | — | Conflict badges, expansion banner, citation rendering |
+| `ConflictBadge.test.tsx` | — | Color/label maps to conflict type enum |
+| `TraceViewer.test.tsx` | — | Steps expand/collapse |
 
 ---
 
@@ -614,13 +624,76 @@ Pre-run outputs for all 5 test queries are in `outputs/`. Each output is a `Quer
 
 ## Bonus: IND Template Generation
 
-The system can fill all sections of an IND Module 2.6.2 Pharmacology Written Summary from the 5 papers:
+### IND Module 2.6.2 — Pharmacology Written Summary
+
+The system extends its agent architecture to fill every section of an IND Module 2.6.2 submission using the same evidence it already retrieved for the research query. The template structure follows ICH M4S(R2) / 21 CFR 312.23(a)(8) and is defined in `data/generation_template.json`.
 
 ```bash
-py -3 main.py --ind-template
+# Run with any research query — IND generation happens after synthesis
+py -3 main.py --query "What is the mechanism of action of NVX-0228?" --ind-template
+
+# Or run on all 5 test queries
+py -3 main.py --run-all --ind-template
 ```
 
-Sections are generated in parallel (7 top-level sections, some with subsections). Each section uses formal FDA regulatory language, inline `[N]` citations, and marks `[INSUFFICIENT DATA]` where the source papers don't provide enough information for a section.
+### Section Structure
+
+| Section | Heading | Subsections |
+|---------|---------|-------------|
+| 2.6.2.1 | Brief Summary | — |
+| 2.6.2.2 | Primary Pharmacodynamics | 2.6.2.2.1 Mechanism of Action, 2.6.2.2.2 In Vitro Pharmacology, 2.6.2.2.3 Structure-Activity Relationships |
+| 2.6.2.3 | Secondary Pharmacodynamics | — |
+| 2.6.2.4 | Safety Pharmacology | — |
+| 2.6.2.5 | Pharmacodynamic Drug Interactions | 2.6.2.5.1 Resistance Mechanisms, 2.6.2.5.2 Strategies to Overcome Resistance |
+| 2.6.2.6 | Clinical Trial Summary | 2.6.2.6.1 Completed Studies, 2.6.2.6.2 Ongoing Studies, 2.6.2.6.3 Terminated Studies |
+| 2.6.2.7 | Discussion and Conclusions | — |
+
+### How it integrates with the agent system
+
+```
+SynthesisAgent completes
+        │
+        ▼  route_after_synthesis() reads generation_template.json
+        │  fans out one Send per top-level section
+        │
+   ┌────┴────┬────────┬────────┬────────┬────────┬────────┐
+   ▼         ▼        ▼        ▼        ▼        ▼        ▼
+ 2.6.2.1  2.6.2.2  2.6.2.3  2.6.2.4  2.6.2.5  2.6.2.6  2.6.2.7
+ (parallel — all 7 INDTemplateAgent instances run simultaneously)
+   └────┬────┴────────┴────────┴────────┴────────┴────────┘
+        │  operator.add fan-in
+        ▼
+  ind_results[] in QueryResult — sorted by section_id, saved to outputs/ JSON
+```
+
+Each `INDTemplateAgent` receives:
+- **All 5 PaperResults** (chunks + extracted claims + warm summaries) — same evidence used by SynthesisAgent
+- **All identified conflicts** from ConflictAgent — so each section knows where papers disagree
+- **Section-specific regulatory guidance** from the template (ICH S7A references, 21 CFR citations, what quantitative data to include)
+
+### Conflict-awareness in IND sections
+
+The agent prompt explicitly handles conflicts: when conflicting values exist across papers, the section presents all values and notes the discrepancy in FDA regulatory language rather than picking one:
+
+```
+IC50 values reported across studies for NVX-0228 against BRD4-BD1 range from
+8.5 nM [2] to 15.3 nM [3], with variation attributable to differences in assay
+format (AlphaScreen, TR-FRET, validated central laboratory assay). A single
+authoritative value cannot be determined from available data without assay
+standardization.
+```
+
+### Insufficient data handling
+
+Sections that require information not present in the 5 source papers are marked rather than fabricated:
+
+```
+[INSUFFICIENT DATA — no in vivo pharmacodynamic data (xenograft or PDX models)
+ available in source documents; preclinical PD studies would be required to
+ complete this section per ICH S7A]
+```
+
+The `INDSectionResult` model tracks `insufficient_data: bool` and `missing_info: str` per section, making gaps machine-readable for downstream review workflows.
 
 ---
 
@@ -663,7 +736,7 @@ CoincidenceLabsTakeHome/
 ├── supabase/
 │   ├── migrations/               # 5 SQL migrations (see migrations/README.md)
 │   └── seed/seed_papers.py       # Paper ingestion script
-├── tests/                        # 24 pytest tests
+├── tests/                        # 54 backend pytest tests
 ├── data/                         # 5 paper JSONs + conflict key + IND template
 ├── outputs/                      # Pre-run query results
 ├── main.py                       # CLI entrypoint

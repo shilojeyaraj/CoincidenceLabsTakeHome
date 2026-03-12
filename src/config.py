@@ -19,10 +19,10 @@ OPENAI_API_KEY: str = os.environ.get("OPENAI_API_KEY", "")
 EMBEDDING_MODEL: str = "text-embedding-3-small"
 EMBEDDING_DIM: int = 1536
 LLM_MODEL: str = "gpt-4o-mini"
-LLM_MAX_TOKENS: int = 4096
 CLAIM_EXTRACTION_MAX_TOKENS: int = 1500   # Claims JSON is small; cap to reduce TTFT
 SYNTHESIS_MAX_TOKENS: int = 2500          # Synthesis answer + References section
 CONFLICT_CLASSIFICATION_MAX_TOKENS: int = 512  # Short JSON classification response
+IND_SECTION_MAX_TOKENS: int = 4096        # IND sections can be long; full budget
 CHUNK_CONTENT_MAX_CHARS: int = 1200       # Truncate chunk content to reduce input tokens
 
 # ---------------------------------------------------------------------------

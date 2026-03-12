@@ -38,7 +38,8 @@ py -3 main.py --query "What is the IC50 of NVX-0228?"
 py -3 main.py --run-all
 
 # Run bonus IND template generation
-py -3 main.py --ind-template
+py -3 main.py --query "What is the mechanism of action of NVX-0228?" --ind-template
+py -3 main.py --run-all --ind-template
 ```
 
 ### Frontend (Next.js) — Preview the UI

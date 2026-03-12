@@ -32,7 +32,9 @@
       "Bash(cd C:/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome && python -m pytest tests/ -x -q 2>&1)",
       "Bash(cd C:/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome && python -m pytest tests/ -q 2>&1)",
       "Bash(python main.py --run-all 2>&1)",
-      "Bash(cd \"C:/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome/frontend\" && npm test -- --watchAll=false 2>&1)"
+      "Bash(cd \"C:/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome/frontend\" && npm test -- --watchAll=false 2>&1)",
+      "Bash(cd \"C:/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome\" && py -3 -m pytest tests/ -q 2>&1 | tail -5)",
+      "Bash(cd \"C:/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome\" && py -3 -m pytest tests/ -q 2>&1 | tail -3 && cd frontend && npm test -- --watchAll=false 2>&1 | tail -5)"
     ]
   }
 }

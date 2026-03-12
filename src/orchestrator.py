@@ -323,6 +323,7 @@ async def run_query(
         papers_cited=papers_cited,
         context_expansion_triggered=final_state.get("context_expansion_triggered", False),
         trace=final_state.get("trace", []),
+        ind_results=final_state.get("ind_results", []),
         timestamp=datetime.utcnow(),
     )
 

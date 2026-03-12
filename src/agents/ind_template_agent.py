@@ -11,7 +11,7 @@ from typing import Any
 import openai
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from src.config import LLM_MAX_TOKENS, LLM_MODEL, OPENAI_API_KEY
+from src.config import IND_SECTION_MAX_TOKENS, LLM_MODEL, OPENAI_API_KEY
 from src.models import Conflict, INDSectionResult, PaperResult, TraceStep
 
 _openai_client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
@@ -190,7 +190,7 @@ class INDTemplateAgent:
                 {"role": "system", "content": _IND_SYSTEM},
                 {"role": "user", "content": user_message},
             ],
-            max_tokens=LLM_MAX_TOKENS,
+            max_tokens=IND_SECTION_MAX_TOKENS,
             temperature=0.1,
         )
 

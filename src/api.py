@@ -6,6 +6,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -19,10 +21,18 @@ from src.orchestrator import run_query
 # App setup
 # ---------------------------------------------------------------------------
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Verify database schema on startup."""
+    verify_schema()
+    yield
+
+
 app = FastAPI(
     title="Multi-Document Conflict Resolution RAG",
     description="RAG system for resolving conflicts across NVX-0228 research papers.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # CORS: allow local frontend and env-configured URL
@@ -34,16 +44,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# ---------------------------------------------------------------------------
-# Startup
-# ---------------------------------------------------------------------------
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    """Verify database schema on startup."""
-    verify_schema()
 
 
 # ---------------------------------------------------------------------------

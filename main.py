@@ -68,6 +68,20 @@ async def run_single(query: str, ind_template: bool = False) -> None:
             f"({step.latency_ms:.0f}ms)"
         )
 
+    if result.ind_results:
+        print(f"\n{'='*70}")
+        print("IND MODULE 2.6.2 — PHARMACOLOGY WRITTEN SUMMARY")
+        print(f"{'='*70}")
+        # Sort sections by section_id for correct CTD order
+        sorted_sections = sorted(result.ind_results, key=lambda s: s.section_id)
+        for section in sorted_sections:
+            marker = " [INSUFFICIENT DATA]" if section.insufficient_data else ""
+            print(f"\n{section.section_id}  {section.heading}{marker}")
+            print("-" * 60)
+            print(section.content)
+            if section.citations:
+                print(f"\n  Citations: [{', '.join(section.citations)}]")
+
 
 async def run_all(ind_template: bool = False) -> None:
     """Run all 5 test queries."""

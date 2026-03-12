@@ -90,6 +90,7 @@ class QueryResult(BaseModel):
     papers_cited: list[str] = Field(default_factory=list)
     context_expansion_triggered: bool = False
     trace: list[TraceStep] = Field(default_factory=list)
+    ind_results: list["INDSectionResult"] = Field(default_factory=list)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 

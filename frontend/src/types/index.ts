@@ -54,6 +54,15 @@ export interface TraceStep {
   timestamp: string;
 }
 
+export interface INDSectionResult {
+  section_id: string;
+  heading: string;
+  content: string;
+  citations: string[];
+  insufficient_data: boolean;
+  missing_info?: string;
+}
+
 export interface QueryResult {
   query: string;
   answer: string;
@@ -61,5 +70,6 @@ export interface QueryResult {
   papers_cited: string[];
   context_expansion_triggered: boolean;
   trace: TraceStep[];
+  ind_results: INDSectionResult[];
   timestamp: string;
 }
