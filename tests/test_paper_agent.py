@@ -3,7 +3,7 @@ Tests for PaperAgent.
 """
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -52,12 +52,14 @@ def _make_openai_claims_client(claims_json: str = '{"claims": []}'):
     emb_resp.data = [emb_item]
     mock_client.embeddings.create.return_value = emb_resp
 
-    # Chat completions
+    # Chat completions — AsyncMock because PaperAgent now uses AsyncOpenAI
     choice = MagicMock()
     choice.message.content = claims_json
     resp = MagicMock()
     resp.choices = [choice]
-    mock_client.chat.completions.create.return_value = resp
+    resp.usage = MagicMock()
+    resp.usage.total_tokens = 150
+    mock_client.chat.completions.create = AsyncMock(return_value=resp)
 
     return mock_client
 
@@ -244,7 +246,7 @@ class TestPaperAgent:
         chat_resp = MagicMock()
         chat_resp.choices = [choice]
         chat_resp.usage = usage
-        mock_client.chat.completions.create.return_value = chat_resp
+        mock_client.chat.completions.create = AsyncMock(return_value=chat_resp)
 
         with patch("src.agents.paper_agent.get_client", return_value=mock_supabase), \
              patch("src.agents.paper_agent._openai_client", mock_client), \

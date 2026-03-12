@@ -14,7 +14,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from src.config import LLM_MAX_TOKENS, LLM_MODEL, OPENAI_API_KEY
 from src.models import Conflict, INDSectionResult, PaperResult, TraceStep
 
-_openai_client = openai.OpenAI(api_key=OPENAI_API_KEY)
+_openai_client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
 
 _IND_SYSTEM = """\
 You are an expert regulatory writer preparing an IND (Investigational New Drug)
@@ -184,7 +184,7 @@ class INDTemplateAgent:
             f"Source data:\n{context}"
         )
 
-        response = _openai_client.chat.completions.create(
+        response = await _openai_client.chat.completions.create(
             model=LLM_MODEL,
             messages=[
                 {"role": "system", "content": _IND_SYSTEM},

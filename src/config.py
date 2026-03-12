@@ -20,18 +20,23 @@ EMBEDDING_MODEL: str = "text-embedding-3-small"
 EMBEDDING_DIM: int = 1536
 LLM_MODEL: str = "gpt-4o-mini"
 LLM_MAX_TOKENS: int = 4096
+CLAIM_EXTRACTION_MAX_TOKENS: int = 1500   # Claims JSON is small; cap to reduce TTFT
+SYNTHESIS_MAX_TOKENS: int = 2048          # Synthesis answer; longer but bounded
+CONFLICT_CLASSIFICATION_MAX_TOKENS: int = 512  # Short JSON classification response
+CHUNK_CONTENT_MAX_CHARS: int = 1200       # Truncate chunk content to reduce input tokens
 
 # ---------------------------------------------------------------------------
 # Supabase
 # ---------------------------------------------------------------------------
 SUPABASE_URL: str = os.environ.get("SUPABASE_URL", "")
-SUPABASE_SERVICE_KEY: str = os.environ.get("SUPABASE_SERVICE_KEY", "")
+SUPABASE_SERVICE_KEY: str = os.environ.get("SUPABASE_SERVICE_KEY", "")  # anon/publishable key
+SUPABASE_SECRET_KEY: str = os.environ.get("SUPABASE_SECRET_KEY", "")    # service_role secret (bypasses RLS)
 
 # ---------------------------------------------------------------------------
 # Retrieval / context management
 # ---------------------------------------------------------------------------
-TOP_K_PER_PAPER: int = 2
-EXPANSION_TOP_K: int = 2
+TOP_K_PER_PAPER: int = 3   # increased from 2 → 3 to improve claim extraction on structural papers
+EXPANSION_TOP_K: int = 5   # must exceed TOP_K_PER_PAPER so expansion fetches genuinely new chunks
 HOT_LIMIT: int = 10
 
 # ---------------------------------------------------------------------------

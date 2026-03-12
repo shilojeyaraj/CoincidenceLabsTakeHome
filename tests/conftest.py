@@ -137,23 +137,23 @@ def mock_openai(monkeypatch):
 
     mock_client = MagicMock()
 
-    # Embeddings
+    # Embeddings (sync client in embeddings.py — called via asyncio.to_thread)
     mock_client.embeddings.create.side_effect = lambda **kwargs: _make_fake_embedding_response(
         kwargs.get("input", [""])
         if isinstance(kwargs.get("input", ""), list)
         else [kwargs.get("input", "")]
     )
 
-    # Chat completions — return different content based on call order
+    # Chat completions — AsyncMock because agents now use AsyncOpenAI (await required)
     call_counter = {"n": 0}
     responses = [fake_claims_json, fake_conflict_json, fake_synthesis]
 
-    def chat_side_effect(**kwargs):
+    def _chat_side_effect(**kwargs):
         idx = call_counter["n"] % len(responses)
         call_counter["n"] += 1
         return _make_fake_chat_response(responses[idx])
 
-    mock_client.chat.completions.create.side_effect = chat_side_effect
+    mock_client.chat.completions.create = AsyncMock(side_effect=_chat_side_effect)
     mock_client.models.list.return_value = MagicMock()
 
     with patch("src.agents.paper_agent._openai_client", mock_client), \

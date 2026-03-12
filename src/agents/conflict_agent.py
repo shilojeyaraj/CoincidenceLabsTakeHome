@@ -15,8 +15,8 @@ import openai
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from src.config import (
+    CONFLICT_CLASSIFICATION_MAX_TOKENS,
     EXPANSION_TOP_K,
-    LLM_MAX_TOKENS,
     LLM_MODEL,
     OPENAI_API_KEY,
 )
@@ -31,7 +31,50 @@ from src.models import (
     TraceStep,
 )
 
-_openai_client = openai.OpenAI(api_key=OPENAI_API_KEY)
+_openai_client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
+
+# ---------------------------------------------------------------------------
+# Property synonym normalization
+# ---------------------------------------------------------------------------
+# Maps LLM-generated property names to canonical forms so that the same concept
+# extracted under different names (e.g. "binding_mode" vs "mechanism_of_action")
+# still gets grouped together for conflict detection.
+_PROPERTY_SYNONYMS: dict[str, str] = {
+    # Mechanism of action variants
+    "binding_mode": "mechanism_of_action",
+    "binding_mechanism": "mechanism_of_action",
+    "inhibition_type": "mechanism_of_action",
+    "inhibition_mechanism": "mechanism_of_action",
+    "mode_of_action": "mechanism_of_action",
+    "moa": "mechanism_of_action",
+    "mechanism": "mechanism_of_action",
+    "action_mechanism": "mechanism_of_action",
+    "inhibitor_type": "mechanism_of_action",
+    "binding_type": "mechanism_of_action",
+    "binding_site_type": "mechanism_of_action",
+    "allosteric_binding": "mechanism_of_action",
+    "competitive_binding": "mechanism_of_action",
+    "allosteric_modulation": "mechanism_of_action",
+    "allosteric_inhibition": "mechanism_of_action",
+    "competitive_inhibition": "mechanism_of_action",
+    "allosteric_mechanism": "mechanism_of_action",
+    "structural_mechanism": "mechanism_of_action",
+    "binding_pose": "mechanism_of_action",
+    # Selectivity variants
+    "bd1_selectivity": "bd1_bd2_selectivity_fold",
+    "selectivity_fold": "bd1_bd2_selectivity_fold",
+    "bd1_bd2_ratio": "bd1_bd2_selectivity_fold",
+    "selectivity_ratio": "bd1_bd2_selectivity_fold",
+    "bd1_bd2_selectivity": "bd1_bd2_selectivity_fold",
+    "selectivity": "bd1_bd2_selectivity_fold",
+}
+
+
+def _normalize_property(name: str) -> str:
+    """Return canonical property name, lowercased and synonym-mapped."""
+    lowered = name.lower().strip()
+    return _PROPERTY_SYNONYMS.get(lowered, lowered)
+
 
 _CONFLICT_CLASSIFICATION_SYSTEM = """\
 You are a pharmaceutical research conflict analyst. You will receive claims for a
@@ -94,11 +137,12 @@ class ConflictAgent:
         """
         start_time = time.time()
 
-        # --- Group claims by property across papers ---
+        # --- Group claims by property across papers (normalize synonyms first) ---
         property_claims: dict[str, list[ExtractedClaim]] = defaultdict(list)
         for pr in paper_results:
             for claim in pr.claims:
-                property_claims[claim.property].append(claim)
+                canonical = _normalize_property(claim.property)
+                property_claims[canonical].append(claim)
 
         # Only analyze properties that appear in ≥2 papers (potential conflicts)
         multi_paper_properties = {
@@ -107,16 +151,19 @@ class ConflictAgent:
             if len({c.paper_id for c in claims}) >= 2
         }
 
-        conflicts: list[Conflict] = []
         expansion_paper_results: list[PaperResult] = []
         expansion_trace_steps: list[TraceStep] = []
         context_expansion_count = 0
 
-        for prop, claims in multi_paper_properties.items():
-            conflict = await self._classify_conflict(prop, claims, paper_results)
-            conflicts.append(conflict)
+        # Classify all properties in parallel (was sequential)
+        classification_tasks = [
+            self._classify_conflict(prop, claims, paper_results)
+            for prop, claims in multi_paper_properties.items()
+        ]
+        conflicts: list[Conflict] = list(await asyncio.gather(*classification_tasks))
 
-            # --- Context expansion for CONCEPTUAL conflicts ---
+        # --- Context expansion for CONCEPTUAL conflicts (sequential — rare) ---
+        for conflict in conflicts:
             if conflict.conflict_type == ConflictType.CONCEPTUAL and conflict.requires_expansion:
                 context_expansion_count += 1
                 exp_results, exp_traces = await self._expand_context(
@@ -191,13 +238,13 @@ class ConflictAgent:
             "Classify the conflict type and provide reasoning."
         )
 
-        response = _openai_client.chat.completions.create(
+        response = await _openai_client.chat.completions.create(
             model=LLM_MODEL,
             messages=[
                 {"role": "system", "content": _CONFLICT_CLASSIFICATION_SYSTEM},
                 {"role": "user", "content": user_message},
             ],
-            max_tokens=1024,
+            max_tokens=CONFLICT_CLASSIFICATION_MAX_TOKENS,
             temperature=0.0,
             response_format={"type": "json_object"},
         )

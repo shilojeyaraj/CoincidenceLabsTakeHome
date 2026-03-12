@@ -9,10 +9,10 @@ from datetime import datetime
 import openai
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from src.config import LLM_MAX_TOKENS, LLM_MODEL, OPENAI_API_KEY
+from src.config import SYNTHESIS_MAX_TOKENS, LLM_MODEL, OPENAI_API_KEY
 from src.models import Conflict, ConflictType, PaperResult, TraceStep
 
-_openai_client = openai.OpenAI(api_key=OPENAI_API_KEY)
+_openai_client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
 
 _SYNTHESIS_SYSTEM = """\
 You are a senior pharmaceutical research analyst synthesizing findings from multiple
@@ -159,13 +159,13 @@ class SynthesisAgent:
             f"{context}"
         )
 
-        response = _openai_client.chat.completions.create(
+        response = await _openai_client.chat.completions.create(
             model=LLM_MODEL,
             messages=[
                 {"role": "system", "content": _SYNTHESIS_SYSTEM},
                 {"role": "user", "content": user_message},
             ],
-            max_tokens=LLM_MAX_TOKENS,
+            max_tokens=SYNTHESIS_MAX_TOKENS,
             temperature=0.2,
         )
 

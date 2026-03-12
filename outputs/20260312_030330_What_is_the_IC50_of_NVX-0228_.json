@@ -1,0 +1,179 @@
+{
+  "query": "What is the IC50 of NVX-0228?",
+  "answer": "**Summary**\n\nNVX-0228 is a selective BRD4-BD1 inhibitor that has shown promising antitumor activity across various hematologic malignancies. The reported IC50 values for NVX-0228 against BRD4-BD1 vary among studies, with values ranging from 8.5 nM to 15.3 nM. This synthesis evaluates the conflicting IC50 values and provides a comprehensive overview of NVX-0228's pharmacological profile based on five scientific papers.\n\n**Key Findings**\n\n1. **IC50 Values**:\n   - Paper 1 reports an IC50 of 12 nM against BRD4-BD1 [Paper1].\n   - Paper 2 presents a refined IC50 of 8.5 nM, determined under optimized assay conditions [Paper2].\n   - Paper 5 indicates an IC50 of 10.2 nM, with a note that values can range from 8.5 to 15.3 nM due to assay variability [Paper5].\n   - Paper 3 reports an IC50 of 15.3 nM, derived from a standardized biochemical assay [Paper3].\n\n2. **Selectivity**:\n   - NVX-0228 exhibits approximately 50-fold selectivity for BRD4-BD1 over BRD4-BD2, with IC50 values of 600 nM [Paper1] and 722 nM [Paper2] for BD2.\n\n3. **Safety Profile**:\n   - In clinical trials, thrombocytopenia was the primary adverse event, with rates varying from 15% to 41% across studies, indicating a manageable safety profile [Paper1, Paper3, Paper5].\n\n4. **Pharmacokinetics**:\n   - NVX-0228 shows favorable pharmacokinetic properties, including a half-life of 6.2 hours and 68% oral bioavailability [Paper2].\n\n**Conflict Analysis**\n\n1. **IC50 Values for BRD4-BD1**:\n   - **Conflicting Values**: 12 nM [Paper1], 8.5 nM [Paper2], 10.2 nM [Paper5], and 15.3 nM [Paper3].\n   - **Reason for Conflict**: The discrepancies arise from differences in assay formats, protein constructs, and laboratory-specific conditions. Paper 5 explicitly notes that variations in IC50 values are expected due to these factors rather than true differences in compound potency.\n   - **Authoritative Source**: Paper 2, which reports the lowest IC50 value (8.5 nM) under optimized conditions, is likely more authoritative due to the use of full-length protein and validated assay methods.\n\n2. **IC50 Values for BRD4-BD2**:\n   - **Conflicting Values**: 600 nM [Paper1] vs. 722 nM [Paper2] and >1000 nM [Paper1].\n   - **Reason for Conflict**: Variations in assay formats and experimental conditions contribute to these differences. The IC50 values are indicative of the compound's selectivity but are not fundamentally contradictory.\n   - **Resolution**: Standardization of assay methods in future studies could help clarify these discrepancies.\n\n**Conclusions**\n\nNVX-0228 demonstrates potent activity as a selective BRD4-BD1 inhibitor, with IC50 values reported between 8.5 nM and 15.3 nM depending on the assay conditions. The compound's selectivity for BRD4-BD1 over BD2 is significant, and its safety profile appears manageable, warranting further clinical exploration. The observed variations in IC50 values highlight the need for standardized assay methodologies to ensure comparability across studies. Overall, NVX-0228 represents a promising therapeutic candidate in the treatment of hematologic malignancies.",
+  "conflicts": [
+    {
+      "property": "ic50_bd1_nm",
+      "conflict_type": "ASSAY_VARIABILITY",
+      "papers_involved": [
+        "paper2_nvx0228_pharmacokinetics",
+        "paper1_nvx0228_novel_inhibitor",
+        "paper5_nvx0228_updated_phase1"
+      ],
+      "claims": [
+        {
+          "paper_id": "paper1_nvx0228_novel_inhibitor",
+          "property": "ic50_bd1_nm",
+          "value": "12",
+          "context": "Selectivity profiling demonstrated that NVX-0228 is BD1-selective with approximately 50-fold selectivity over BD2 (BD1 IC50 = 12 nM; BD2 IC50 = 600 nM).",
+          "chunk_id": "p1-chunk-004-f1a3c6d8",
+          "confidence": 0.95
+        },
+        {
+          "paper_id": "paper1_nvx0228_novel_inhibitor",
+          "property": "ic50_bd1_nm",
+          "value": "12",
+          "context": "NVX-0228 as a selective BRD4-BD1 inhibitor with an IC50 of 12 nM in biochemical assays.",
+          "chunk_id": "p1-chunk-001-a3f8b2c1",
+          "confidence": 0.95
+        },
+        {
+          "paper_id": "paper2_nvx0228_pharmacokinetics",
+          "property": "ic50_bd1_nm",
+          "value": "8.5",
+          "context": "NVX-0228 demonstrated an IC50 of 8.5 nM (95% CI: 6.2-11.7 nM) against BRD4-BD1, with selectivity of approximately 85-fold over BD2 (BD2 IC50 = 722 nM).",
+          "chunk_id": "p2-chunk-003-f6a2b9c7",
+          "confidence": 0.95
+        },
+        {
+          "paper_id": "paper5_nvx0228_updated_phase1",
+          "property": "ic50_bd1_nm",
+          "value": "10.2",
+          "context": "NVX-0228 demonstrated an IC50 of 10.2 nM against BRD4-BD1 as determined by the validated central laboratory assay.",
+          "chunk_id": "p5-chunk-001-d8e4f2a6",
+          "confidence": 1.0
+        },
+        {
+          "paper_id": "paper5_nvx0228_updated_phase1",
+          "property": "ic50_bd1_nm",
+          "value": "8.5",
+          "context": "The discrepancy between the IC50 values reported across different studies (ranging from 8.5 to 15.3 nM) likely reflects differences in assay format, protein construct, and laboratory-specific conditions rather than true differences in compound potency.",
+          "chunk_id": "p5-chunk-008-a7b2c5d9",
+          "confidence": 0.7
+        },
+        {
+          "paper_id": "paper5_nvx0228_updated_phase1",
+          "property": "ic50_bd1_nm",
+          "value": "15.3",
+          "context": "The discrepancy between the IC50 values reported across different studies (ranging from 8.5 to 15.3 nM) likely reflects differences in assay format, protein construct, and laboratory-specific conditions rather than true differences in compound potency.",
+          "chunk_id": "p5-chunk-008-a7b2c5d9",
+          "confidence": 0.7
+        }
+      ],
+      "reasoning": "The reported IC50 values for NVX-0228 against BRD4-BD1 vary across different studies: 12 nM (paper1), 8.5 nM (paper2), and 10.2 nM (paper5). The paper5 also notes a range of IC50 values from 8.5 to 15.3 nM, attributing these discrepancies to differences in assay formats, protein constructs, and laboratory-specific conditions rather than true differences in compound potency. This indicates that the variations in numerical results are expected scientific variations due to different assay methodologies rather than fundamental disagreements about the compound's efficacy.",
+      "resolution": "Further standardization of assay conditions and protocols across studies could help reconcile these differences in IC50 values.",
+      "requires_expansion": false
+    },
+    {
+      "property": "ic50_bd2_nm",
+      "conflict_type": "ASSAY_VARIABILITY",
+      "papers_involved": [
+        "paper2_nvx0228_pharmacokinetics",
+        "paper1_nvx0228_novel_inhibitor"
+      ],
+      "claims": [
+        {
+          "paper_id": "paper1_nvx0228_novel_inhibitor",
+          "property": "ic50_bd2_nm",
+          "value": "600",
+          "context": "Selectivity profiling demonstrated that NVX-0228 is BD1-selective with approximately 50-fold selectivity over BD2 (BD1 IC50 = 12 nM; BD2 IC50 = 600 nM).",
+          "chunk_id": "p1-chunk-004-f1a3c6d8",
+          "confidence": 0.95
+        },
+        {
+          "paper_id": "paper1_nvx0228_novel_inhibitor",
+          "property": "ic50_bd2_nm",
+          "value": "> 1000",
+          "context": "NVX-0228 showed minimal activity against BRD2 and BRD3 BD2 domains (IC50 > 1 μM), suggesting a favorable therapeutic window compared to pan-BET inhibitors.",
+          "chunk_id": "p1-chunk-004-f1a3c6d8",
+          "confidence": 0.95
+        },
+        {
+          "paper_id": "paper2_nvx0228_pharmacokinetics",
+          "property": "ic50_bd2_nm",
+          "value": "722",
+          "context": "BD2 IC50 = 722 nM.",
+          "chunk_id": "p2-chunk-003-f6a2b9c7",
+          "confidence": 0.95
+        }
+      ],
+      "reasoning": "The reported IC50 values for the BD2 domain of NVX-0228 vary across different papers: Paper 1 reports an IC50 of 600 nM, while Paper 2 reports 722 nM, and Paper 1 also mentions an IC50 > 1000 nM for BRD2 and BRD3. These differences can be attributed to the use of different assay formats or experimental conditions, which is expected scientific variation rather than a fundamental disagreement on the property being measured.",
+      "resolution": "Further investigation into the specific assay methods used in each study could clarify the reasons for the variation in IC50 values. It may be beneficial to standardize the assay conditions for future studies to ensure comparability.",
+      "requires_expansion": false
+    }
+  ],
+  "papers_cited": [
+    "paper1_nvx0228_novel_inhibitor",
+    "paper2_nvx0228_pharmacokinetics",
+    "paper3_brd4_hematologic_comparative",
+    "paper4_nvx0228_structural_basis",
+    "paper5_nvx0228_updated_phase1"
+  ],
+  "context_expansion_triggered": false,
+  "trace": [
+    {
+      "step": "paper_agent_paper1_nvx0228_novel_inhibitor",
+      "agent": "PaperAgent",
+      "input_summary": "query='What is the IC50 of NVX-0228?...', paper_id=paper1_nvx0228_novel_inhibitor, match_count=2",
+      "output_summary": "Retrieved 2 chunks, extracted 4 claims",
+      "tokens_used": 1136,
+      "latency_ms": 7156.932830810547,
+      "timestamp": "2026-03-12T03:02:59.762564"
+    },
+    {
+      "step": "paper_agent_paper2_nvx0228_pharmacokinetics",
+      "agent": "PaperAgent",
+      "input_summary": "query='What is the IC50 of NVX-0228?...', paper_id=paper2_nvx0228_pharmacokinetics, match_count=2",
+      "output_summary": "Retrieved 2 chunks, extracted 5 claims",
+      "tokens_used": 1178,
+      "latency_ms": 12256.427764892578,
+      "timestamp": "2026-03-12T03:03:06.013247"
+    },
+    {
+      "step": "paper_agent_paper3_brd4_hematologic_comparative",
+      "agent": "PaperAgent",
+      "input_summary": "query='What is the IC50 of NVX-0228?...', paper_id=paper3_brd4_hematologic_comparative, match_count=2",
+      "output_summary": "Retrieved 2 chunks, extracted 1 claims",
+      "tokens_used": 821,
+      "latency_ms": 2704.361915588379,
+      "timestamp": "2026-03-12T03:02:56.544911"
+    },
+    {
+      "step": "paper_agent_paper4_nvx0228_structural_basis",
+      "agent": "PaperAgent",
+      "input_summary": "query='What is the IC50 of NVX-0228?...', paper_id=paper4_nvx0228_structural_basis, match_count=2",
+      "output_summary": "Retrieved 2 chunks, extracted 3 claims",
+      "tokens_used": 1007,
+      "latency_ms": 8266.652584075928,
+      "timestamp": "2026-03-12T03:03:02.262109"
+    },
+    {
+      "step": "paper_agent_paper5_nvx0228_updated_phase1",
+      "agent": "PaperAgent",
+      "input_summary": "query='What is the IC50 of NVX-0228?...', paper_id=paper5_nvx0228_updated_phase1, match_count=2",
+      "output_summary": "Retrieved 2 chunks, extracted 3 claims",
+      "tokens_used": 1076,
+      "latency_ms": 15670.526504516602,
+      "timestamp": "2026-03-12T03:03:09.752832"
+    },
+    {
+      "step": "conflict_agent",
+      "agent": "ConflictAgent",
+      "input_summary": "query='What is the IC50 of NVX-0228?', 5 papers, 16 total claims, 2 multi-paper properties",
+      "output_summary": "2 conflicts classified: [ic50_bd1_nm:ASSAY_VARIABILITY, ic50_bd2_nm:ASSAY_VARIABILITY]; context_expansion_triggered=False (0 CONCEPTUAL)",
+      "tokens_used": 0,
+      "latency_ms": 6712.802171707153,
+      "timestamp": "2026-03-12T03:03:16.468735"
+    },
+    {
+      "step": "synthesis_agent",
+      "agent": "SynthesisAgent",
+      "input_summary": "query='What is the IC50 of NVX-0228?', 5 papers, 2 conflicts [ic50_bd1_nm=ASSAY_VARIABILITY, ic50_bd2_nm=ASSAY_VARIABILITY]",
+      "output_summary": "Synthesized answer (3078 chars)",
+      "tokens_used": 5937,
+      "latency_ms": 14495.774984359741,
+      "timestamp": "2026-03-12T03:03:30.966727"
+    }
+  ],
+  "timestamp": "2026-03-12T03:03:30.969748"
+}

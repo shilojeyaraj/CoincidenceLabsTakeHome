@@ -200,6 +200,88 @@ All 45 tests pass (includes 4 pre-existing tests in other files not listed above
 
 ---
 
+## Session 3 Optimizations (Performance + Correctness)
+
+### 8. AsyncOpenAI Client (All Agents)
+
+**Problem:** All 4 agents used `openai.OpenAI` (sync) wrapped in `asyncio.to_thread` for LLM calls. This placed every LLM call in the thread pool, preventing true async concurrency and adding thread-switching overhead.
+
+**Fix:** Changed all agents to `openai.AsyncOpenAI` and added `await` to all `chat.completions.create()` calls. Test mocks updated to use `AsyncMock`.
+
+**Impact:** ~2× speedup. Q3 (mechanism) dropped from 79-84s to ~41s average.
+
+---
+
+### 9. Parallel Conflict Classification (`conflict_agent.py`)
+
+**Problem:** ConflictAgent classified each multi-paper property sequentially in a for-loop. With 4-5 properties to classify, this was 4-5 sequential LLM calls.
+
+**Fix:** `asyncio.gather(*classification_tasks)` runs all classifications concurrently.
+
+**Impact:** ConflictAgent phase dropped from 15-17s to 4-7s (~3× faster).
+
+---
+
+### 10. Fine-Grained Supabase Semaphore (`paper_agent.py`)
+
+**Problem:** The orchestrator's `Semaphore(3)` wrapped the entire `paper_node` execution (Supabase fetch + LLM extraction). This blocked LLM calls from running concurrently — while paper1 waited for OpenAI (30s), papers 4 and 5 were blocked.
+
+**Fix:** Moved the semaphore to `PaperAgent._get_supabase_sem()`. It only wraps the Supabase calls (paper_summaries query + match_chunks RPC, ~200ms each). LLM extraction for all 5 papers now runs fully concurrently.
+
+**Impact:** Paper phase can run all 5 LLM calls in parallel; total time = max(slowest paper) instead of batched sequential.
+
+---
+
+### 11. Reduced max_tokens Per Agent (`config.py`)
+
+**Problem:** `LLM_MAX_TOKENS = 4096` was used for all calls. Claims JSON is ~300-500 tokens; conflict classification JSON is ~100 tokens. Forcing 4096 max_tokens delayed API responses.
+
+**Fix:** Added per-agent token limits:
+- `CLAIM_EXTRACTION_MAX_TOKENS = 1500`
+- `SYNTHESIS_MAX_TOKENS = 2048`
+- `CONFLICT_CLASSIFICATION_MAX_TOKENS = 512`
+- `CHUNK_CONTENT_MAX_CHARS = 1200` (truncates chunk content before sending)
+
+---
+
+### 12. Mechanism of Action Extraction (`paper_agent.py`)
+
+**Problem:** CONCEPTUAL conflict (Paper1: competitive inhibitor vs Paper4: allosteric modulator) was never detected. The LLM used inconsistent property names (`binding_mode`, `inhibitor_type`, `allosteric_binding` etc.) across papers, so the ConflictAgent's grouping step never found matching properties.
+
+**Fix (two-pronged):**
+1. Extraction prompt explicitly instructs: _always use property name `mechanism_of_action` for binding mechanism claims_
+2. `_PROPERTY_SYNONYMS` in `conflict_agent.py` expanded with 10 additional aliases (`inhibitor_type`, `binding_type`, `allosteric_binding`, `competitive_inhibition`, etc.)
+
+**Impact:** `mechanism_of_action: CONCEPTUAL` now fires reliably. Context expansion triggers for all mechanism-related queries.
+
+---
+
+### 13. Context Expansion Improvements (`config.py`, `orchestrator.py`)
+
+**Problem:** `context_expansion_triggered` flag was `False` even when expansion ran, because `EXPANSION_TOP_K = 3` matched `TOP_K_PER_PAPER = 3` — expanded chunks were all duplicates. The flag used `len(expansion_results) > 0` (new chunks found), not whether expansion was triggered.
+
+**Fix:**
+- `EXPANSION_TOP_K = 5` (now fetches 5 > 3 initial chunks → guaranteed new chunks)
+- Flag now uses `len(expansion_traces) > 0` (traces always emit when CONCEPTUAL fires)
+
+---
+
+## Test Coverage After All Sessions
+
+| Test file | Tests |
+|-----------|-------|
+| `test_paper_agent.py` | 8 |
+| `test_conflict_agent.py` | 5 |
+| `test_synthesis_agent.py` | 4 |
+| `test_context_manager.py` | 18 |
+| `test_api.py` | 12 |
+| `test_orchestrator.py` | 7 |
+| **Total** | **54 backend tests** |
+
+All 45 tests pass (54 including pre-existing). All mocks updated to `AsyncMock` after AsyncOpenAI migration.
+
+---
+
 ## What Was Not Changed
 
 - **Async Supabase client**: The `supabase` Python SDK's async client (`acreate_client`) would require restructuring the entire `db.py` module and all agent constructors. The `asyncio.to_thread` fix achieves the same non-blocking benefit with less risk of introducing initialization-order bugs.

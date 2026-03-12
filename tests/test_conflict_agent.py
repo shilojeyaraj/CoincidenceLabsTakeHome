@@ -4,7 +4,7 @@ Tests for ConflictAgent.
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -56,7 +56,9 @@ def _mock_openai_for_conflict(conflict_json: str) -> MagicMock:
     choice.message.content = conflict_json
     resp = MagicMock()
     resp.choices = [choice]
-    mock_client.chat.completions.create.return_value = resp
+    resp.usage = MagicMock()
+    resp.usage.total_tokens = 100
+    mock_client.chat.completions.create = AsyncMock(return_value=resp)
     return mock_client
 
 

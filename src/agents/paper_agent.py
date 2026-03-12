@@ -12,9 +12,22 @@ from typing import Optional
 import openai
 from tenacity import retry, stop_after_attempt, wait_exponential
 
+# Limit concurrent Supabase calls to 3. The semaphore is created lazily inside
+# the running event loop so it always belongs to the correct loop.
+_supabase_sem: asyncio.Semaphore | None = None
+
+
+def _get_supabase_sem() -> asyncio.Semaphore:
+    global _supabase_sem
+    if _supabase_sem is None:
+        _supabase_sem = asyncio.Semaphore(3)
+    return _supabase_sem
+
+
 from src.config import (
+    CLAIM_EXTRACTION_MAX_TOKENS,
+    CHUNK_CONTENT_MAX_CHARS,
     EXPANSION_TOP_K,
-    LLM_MAX_TOKENS,
     LLM_MODEL,
     OPENAI_API_KEY,
     TOP_K_PER_PAPER,
@@ -29,7 +42,7 @@ from src.models import (
     TraceStep,
 )
 
-_openai_client = openai.OpenAI(api_key=OPENAI_API_KEY)
+_openai_client = openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
 
 _CLAIM_EXTRACTION_SYSTEM = """\
 You are a pharmaceutical research analyst. Your task is to extract ALL structured
@@ -42,6 +55,10 @@ Guidelines:
 - Assign a confidence score (0.0–1.0): 1.0 = direct numerical measurement,
   0.7 = indirect/inferred, 0.4 = qualitative only
 - Property names should be snake_case (e.g., "ic50_bd1_nm", "thrombocytopenia_rate_pct")
+- ALWAYS extract mechanism of action claims using property name "mechanism_of_action".
+  Examples: "competitive inhibitor", "allosteric modulator", "competitive binding to
+  acetyl-lysine pocket", "allosteric binding via ZA loop displacement". Confidence = 0.7
+  for qualitative mechanism claims.
 
 Return a JSON array of objects with these fields:
   paper_id, property, value, context, chunk_id, confidence
@@ -55,6 +72,14 @@ Example:
     "context": "NVX-0228 demonstrated IC50 of 12 nM in BD1 biochemical assay (AlphaScreen)",
     "chunk_id": "p1-chunk-001-a3f8b2c1",
     "confidence": 0.95
+  },
+  {
+    "paper_id": "paper1_nvx0228_novel_inhibitor",
+    "property": "mechanism_of_action",
+    "value": "competitive inhibitor",
+    "context": "NVX-0228 acts as a competitive inhibitor occupying the acetyl-lysine binding pocket",
+    "chunk_id": "p1-chunk-002-b4c9d3e2",
+    "confidence": 0.7
   }
 ]
 """
@@ -86,55 +111,59 @@ class PaperAgent:
         """
         start_time = time.time()
 
-        # --- Fetch WARM summary from paper_summaries ---
+        # --- Supabase phase: semaphore limits concurrent connections to 3 ---
+        # The semaphore covers only the Supabase I/O, NOT the OpenAI LLM call,
+        # so all 5 papers can extract claims concurrently once fetching is done.
         warm_summary: Optional[str] = None
         paper_title: Optional[str] = None
         paper_authors: Optional[list[str]] = None
         publication_date_val: Optional[date] = None
         journal_val: Optional[str] = None
         sample_size_val: Optional[int] = None
+        raw_chunks: list[dict] = []
 
-        try:
-            resp = (
-                self._client.table("paper_summaries")
-                .select("*")
-                .eq("paper_id", self.paper_id)
-                .limit(1)
-                .execute()
+        async with _get_supabase_sem():
+            try:
+                resp = (
+                    self._client.table("paper_summaries")
+                    .select("*")
+                    .eq("paper_id", self.paper_id)
+                    .limit(1)
+                    .execute()
+                )
+                if resp.data:
+                    row = resp.data[0]
+                    warm_summary = row.get("summary")
+                    paper_title = row.get("title")
+                    paper_authors = row.get("authors", [])
+                    pub_date_str = row.get("publication_date")
+                    if pub_date_str:
+                        try:
+                            publication_date_val = date.fromisoformat(pub_date_str)
+                        except ValueError:
+                            pass
+                    journal_val = row.get("journal")
+                    sample_size_val = row.get("sample_size")
+            except Exception:
+                pass  # Graceful degradation if summary not available
+
+            # --- Generate query embedding (cached: all 5 agents share the result) ---
+            query_embedding = list(
+                await asyncio.to_thread(generate_embedding_cached, query)
             )
-            if resp.data:
-                row = resp.data[0]
-                warm_summary = row.get("summary")
-                paper_title = row.get("title")
-                paper_authors = row.get("authors", [])
-                pub_date_str = row.get("publication_date")
-                if pub_date_str:
-                    try:
-                        publication_date_val = date.fromisoformat(pub_date_str)
-                    except ValueError:
-                        pass
-                journal_val = row.get("journal")
-                sample_size_val = row.get("sample_size")
-        except Exception:
-            pass  # Graceful degradation if summary not available
 
-        # --- Generate query embedding (cached: all 5 agents share the result) ---
-        query_embedding = list(
-            await asyncio.to_thread(generate_embedding_cached, query)
-        )
+            # --- Determine match_count ---
+            if extra_count > 0:
+                match_count = extra_count
+            elif expanded:
+                match_count = EXPANSION_TOP_K
+            else:
+                match_count = TOP_K_PER_PAPER
 
-        # --- Determine match_count ---
-        if extra_count > 0:
-            match_count = extra_count
-        elif expanded:
-            match_count = EXPANSION_TOP_K
-        else:
-            match_count = TOP_K_PER_PAPER
-
-        # --- Call match_chunks RPC (blocking I/O → off the event loop) ---
-        raw_chunks = await asyncio.to_thread(
-            search_paper, query_embedding, self.paper_id, match_count
-        )
+            # --- Call match_chunks RPC (blocking I/O → off the event loop) ---
+            raw_chunks = await asyncio.to_thread(
+                search_paper, query_embedding, self.paper_id, match_count
+            )
 
         # --- Build RetrievedChunk objects ---
         retrieved: list[RetrievedChunk] = []
@@ -206,10 +235,13 @@ class PaperAgent:
         chunk_context_parts = []
         for rc in retrieved:
             chunk_type_tag = "[TABLE]" if rc.chunk.chunk_type == "table" else "[TEXT]"
+            content = rc.chunk.content
+            if len(content) > CHUNK_CONTENT_MAX_CHARS:
+                content = content[:CHUNK_CONTENT_MAX_CHARS] + "...[truncated]"
             chunk_context_parts.append(
                 f"{chunk_type_tag} chunk_id={rc.chunk.id} "
                 f"section='{rc.chunk.section}' page={rc.chunk.page}\n"
-                f"{rc.chunk.content}"
+                f"{content}"
             )
         chunk_context = "\n\n---\n\n".join(chunk_context_parts)
 
@@ -220,13 +252,13 @@ class PaperAgent:
             "Extract all factual claims relevant to the research question as JSON."
         )
 
-        response = _openai_client.chat.completions.create(
+        response = await _openai_client.chat.completions.create(
             model=LLM_MODEL,
             messages=[
                 {"role": "system", "content": _CLAIM_EXTRACTION_SYSTEM},
                 {"role": "user", "content": user_message},
             ],
-            max_tokens=LLM_MAX_TOKENS,
+            max_tokens=CLAIM_EXTRACTION_MAX_TOKENS,
             temperature=0.0,
             response_format={"type": "json_object"},
         )

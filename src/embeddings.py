@@ -77,6 +77,7 @@ def _embed_batch(texts: list[str]) -> list[list[float]]:
 # Vector search via Supabase RPC
 # ---------------------------------------------------------------------------
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=8))
 def search_paper(
     query_embedding: list[float],
     paper_id: str,
@@ -87,6 +88,8 @@ def search_paper(
 
     Returns a list of dicts with keys:
         id, paper_id, chunk_type, content, section, page, grounding, similarity
+
+    Retry-wrapped to handle transient Supabase connection resets under concurrent load.
     """
     client = get_client()
     response = client.rpc(

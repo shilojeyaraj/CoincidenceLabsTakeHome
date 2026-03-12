@@ -120,9 +120,11 @@ describe("ResultCard", () => {
 
   it("renders papers cited list", () => {
     render(<ResultCard result={mockQueryResult} />);
-    expect(screen.getByText("paper_001")).toBeInTheDocument();
-    expect(screen.getByText("paper_002")).toBeInTheDocument();
-    expect(screen.getByText("paper_003")).toBeInTheDocument();
+    // paper IDs appear in both the papers-cited badge list and potentially elsewhere
+    // so use getAllByText and assert at least one instance exists
+    expect(screen.getAllByText("paper_001").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("paper_002").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("paper_003").length).toBeGreaterThan(0);
   });
 
   it("[Paper1] citation in answer renders as badge", () => {

@@ -13,6 +13,7 @@ import json
 import operator
 import threading
 from datetime import datetime
+from asyncio import Semaphore
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -100,7 +101,9 @@ async def conflict_node(state: GraphState) -> dict:
         query=query, paper_results=paper_results
     )
 
-    context_expansion_triggered = len(expansion_results) > 0
+    # Use expansion_traces as the source-of-truth: traces emit whenever CONCEPTUAL
+    # conflict triggers expansion, even if all fetched chunks are already-seen duplicates.
+    context_expansion_triggered = len(expansion_traces) > 0
 
     # Merge expansion results into paper_results (fan-in via operator.add)
     all_trace = [trace_step] + expansion_traces
@@ -242,6 +245,20 @@ def build_graph() -> Any:
     # Compile with memory checkpointer
     checkpointer = MemorySaver()
     return builder.compile(checkpointer=checkpointer)
+
+
+# Limit concurrent Supabase RPC calls to 3 to avoid socket pool exhaustion on free tier.
+# All 5 paper_nodes fire simultaneously via Send; without a semaphore this opens 5
+# simultaneous HTTP/2 connections which triggers WinError 10035 / ConnectionTerminated.
+_supabase_semaphore: Semaphore | None = None
+
+
+def _get_semaphore() -> Semaphore:
+    """Return the per-event-loop semaphore, creating it lazily."""
+    global _supabase_semaphore
+    if _supabase_semaphore is None:
+        _supabase_semaphore = Semaphore(3)
+    return _supabase_semaphore
 
 
 # Singleton graph instance with lock to prevent double-init under concurrent requests
