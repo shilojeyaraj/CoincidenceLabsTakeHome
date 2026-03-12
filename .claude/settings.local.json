@@ -34,7 +34,9 @@
       "Bash(python main.py --run-all 2>&1)",
       "Bash(cd \"C:/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome/frontend\" && npm test -- --watchAll=false 2>&1)",
       "Bash(cd \"C:/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome\" && py -3 -m pytest tests/ -q 2>&1 | tail -5)",
-      "Bash(cd \"C:/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome\" && py -3 -m pytest tests/ -q 2>&1 | tail -3 && cd frontend && npm test -- --watchAll=false 2>&1 | tail -5)"
+      "Bash(cd \"C:/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome\" && py -3 -m pytest tests/ -q 2>&1 | tail -3 && cd frontend && npm test -- --watchAll=false 2>&1 | tail -5)",
+      "Bash(cd \"C:\\\\Users\\\\shilo\\\\Coincidence-Take_Home\\\\CoincidenceLabsTakeHome\" && python -c \"\nimport json\nwith open\\('outputs/20260312_150241_What_clinical_trials_have_been_conducted.json'\\) as f:\n    d = json.load\\(f\\)\nfor t in d['trace']:\n    print\\(f\\\\\"{t['agent']} | {t['step']} | {t['latency_ms']:.0f}ms\\\\\"\\)\nprint\\('context_expansion_triggered:', d.get\\('context_expansion_triggered'\\)\\)\nprint\\('conflicts:', [\\(c['property'], c['conflict_type']\\) for c in d['conflicts']]\\)\n\")",
+      "Bash(cd \"C:\\\\Users\\\\shilo\\\\Coincidence-Take_Home\\\\CoincidenceLabsTakeHome\" && python -c \"\nimport json\nwith open\\('outputs/20260312_150340_What_resistance_mechanisms_have_been_ide.json'\\) as f:\n    d = json.load\\(f\\)\nfor t in d['trace']:\n    print\\(f\\\\\"{t['agent']} | {t['step']} | {t['latency_ms']:.0f}ms\\\\\"\\)\nprint\\('context_expansion_triggered:', d.get\\('context_expansion_triggered'\\)\\)\n\")"
     ]
   }
 }

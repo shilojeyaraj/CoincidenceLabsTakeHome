@@ -597,6 +597,7 @@ py -3 -m pytest tests/test_conflict_agent.py -v
 
 > **All 6 pre-run output files are in [`outputs/`](outputs/).** Each is a complete `QueryResult` JSON — answer, conflicts, trace, and papers cited.
 > See [`outputs/README.md`](outputs/README.md) for a guided breakdown of what to look at in each file.
+> **Want to read an actual answer?** [`docs/SAMPLE_OUTPUTS.md`](docs/SAMPLE_OUTPUTS.md) shows the IC50 query rendered as human-readable text — full answer, conflict table, and agent trace with latencies.
 
 | Query | File | Key conflicts | Context expansion |
 |-------|------|--------------|------------------|
