@@ -595,30 +595,19 @@ py -3 -m pytest tests/test_conflict_agent.py -v
 
 ## Example Outputs
 
-Pre-run outputs for all 5 test queries are in `outputs/`. Each output is a `QueryResult` JSON containing:
+> **All 6 pre-run output files are in [`outputs/`](outputs/).** Each is a complete `QueryResult` JSON — answer, conflicts, trace, and papers cited.
+> See [`outputs/README.md`](outputs/README.md) for a guided breakdown of what to look at in each file.
 
-```json
-{
-  "query": "What is the IC50 of NVX-0228?",
-  "answer": "SUMMARY\n\nThe IC50 values for NVX-0228 range from 8.5–15.3 nM across four studies (Chen et al., 2023; Liu et al., 2024; Williams et al., 2024; Rodriguez et al., 2025)...\n\nREFERENCES\n\nChen, W. et al. (2023). NVX-0228: A Novel BRD4 Inhibitor...",
-  "conflicts": [
-    {
-      "property": "ic50_bd1_nm",
-      "conflict_type": "ASSAY_VARIABILITY",
-      "papers_involved": ["paper1_nvx0228_novel_inhibitor", "paper2_nvx0228_pharmacokinetics", ...],
-      "reasoning": "Values range 8.5–15.3 nM; variation attributable to TR-FRET vs AlphaScreen vs validated central lab assay formats",
-      "resolution": "Assay standardization recommended"
-    }
-  ],
-  "papers_cited": ["paper1_nvx0228_novel_inhibitor", "paper2_nvx0228_pharmacokinetics", ...],
-  "context_expansion_triggered": false,
-  "trace": [
-    {"agent": "PaperAgent", "step": "paper_agent_paper1_nvx0228_novel_inhibitor", "latency_ms": 11397, ...},
-    {"agent": "ConflictAgent", "step": "conflict_agent", ...},
-    {"agent": "SynthesisAgent", "step": "synthesis_agent", ...}
-  ]
-}
-```
+| Query | File | Key conflicts | Context expansion |
+|-------|------|--------------|------------------|
+| What is the IC50 of NVX-0228? | [`outputs/20260312_145936_What_is_the_IC50_of_NVX-0228_.json`](outputs/20260312_145936_What_is_the_IC50_of_NVX-0228_.json) | ASSAY_VARIABILITY (8.5–15.3 nM across 4 assay formats) | No |
+| What toxicity was observed? | [`outputs/20260312_150039_What_toxicity_was_observed_with_NVX-0228.json`](outputs/20260312_150039_What_toxicity_was_observed_with_NVX-0228.json) | METHODOLOGY × 4 (thrombocytopenia 15% → 22% → 41%) | No |
+| What is the mechanism of action? | [`outputs/20260312_150137_What_is_the_mechanism_of_action_of_NVX-0.json`](outputs/20260312_150137_What_is_the_mechanism_of_action_of_NVX-0.json) | **CONCEPTUAL** (competitive vs allosteric) | **Yes — 12-step trace** |
+| What clinical trials were conducted? | [`outputs/20260312_150241_What_clinical_trials_have_been_conducted.json`](outputs/20260312_150241_What_clinical_trials_have_been_conducted.json) | CONCEPTUAL + METHODOLOGY × 3 + NON_CONFLICT | **Yes** |
+| What resistance mechanisms exist? | [`outputs/20260312_150340_What_resistance_mechanisms_have_been_ide.json`](outputs/20260312_150340_What_resistance_mechanisms_have_been_ide.json) | CONCEPTUAL + ASSAY_VARIABILITY | **Yes** |
+| *(bonus)* Oral bioavailability & half-life? | [`outputs/20260312_151144_What_is_the_oral_bioavailability_and_hal.json`](outputs/20260312_151144_What_is_the_oral_bioavailability_and_hal.json) | METHODOLOGY × 3 (preclinical vs clinical PK) | No |
+
+The mechanism-of-action query is the most interesting to inspect — open that file and look at the `trace` array. It has **12 steps** instead of the usual 7: the system detected a CONCEPTUAL conflict, automatically fetched additional chunks from all 5 papers (`ConflictAgent.ContextExpansion` steps), then synthesised with the expanded evidence set.
 
 ---
 
