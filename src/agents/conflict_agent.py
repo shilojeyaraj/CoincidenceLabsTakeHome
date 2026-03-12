@@ -110,6 +110,10 @@ Return a JSON object with:
     NON_CONFLICT and EVOLVING_DATA)",
   "requires_expansion": true|false  // true only for CONCEPTUAL conflicts
 }
+
+IMPORTANT: When referring to papers in your reasoning and resolution, always write
+"Paper 1", "Paper 2", etc. (capital P, space before number). Never write "paper1" or
+"paper2" without a space.
 """
 
 _EXPANSION_SYSTEM = """\
@@ -263,13 +267,18 @@ class ConflictAgent:
 
         papers_involved = list({c.paper_id for c in claims})
 
+        # Normalise "paper1" / "paper 1" → "Paper 1" in reasoning/resolution text
+        def _fix_paper_refs(text: str) -> str:
+            import re
+            return re.sub(r'\bpaper\s*(\d+)\b', lambda m: f"Paper {m.group(1)}", text, flags=re.IGNORECASE)
+
         return Conflict(
             property=property_name,
             conflict_type=conflict_type,
             papers_involved=papers_involved,
             claims=claims,
-            reasoning=data.get("reasoning", ""),
-            resolution=data.get("resolution"),
+            reasoning=_fix_paper_refs(data.get("reasoning", "")),
+            resolution=_fix_paper_refs(data.get("resolution") or "") or None,
             requires_expansion=bool(data.get("requires_expansion", False)),
         )
 
