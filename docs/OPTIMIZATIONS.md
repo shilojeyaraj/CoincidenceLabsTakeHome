@@ -282,6 +282,40 @@ All 45 tests pass (54 including pre-existing). All mocks updated to `AsyncMock` 
 
 ---
 
+---
+
+## Session 4 — Output Quality & Frontend Formatting
+
+### 14. Author-Year Citations & Full References (`synthesis_agent.py`)
+
+**Problem:** Output used `[Paper1]` / `[Paper2]` labels — unprofessional and unhelpful to readers.
+
+**Fix:** Added `_make_citation_key()` and `_make_full_reference()` static methods. Built a `citation_map` (paper_id → `Chen et al., 2023` key) from `RetrievedChunk.paper_authors` and `.publication_date`. A `=== PAPER REGISTRY ===` block is prepended to the LLM context so the model knows exactly which key maps to which paper. The REFERENCES section at the end of every answer now lists full bibliographic entries (authors, year, title, journal).
+
+### 15. Plain-Text Formatting (`synthesis_agent.py`)
+
+**Problem:** LLM output contained `**bold**`, `## headers`, and citation after every individual number — unreadable in the UI.
+
+**Fix:** Added explicit `FORMATTING RULES` block to `_SYNTHESIS_SYSTEM`:
+- No markdown syntax of any kind
+- Section headers in ALL CAPS on their own line
+- Cite sparingly — once per finding, not after every data value
+- Blank line between every numbered item and bullet group
+
+### 16. Structured Answer Renderer (`frontend/src/components/ResultCard.tsx`)
+
+**Problem:** The `answer` field (plain text with ALL CAPS headers and numbered lists) was rendered as a single dense `<p>` block with no visual structure.
+
+**Fix:** Replaced the `AnswerText` component with a full section parser:
+- Detects `SUMMARY`, `KEY FINDINGS`, `CONFLICT ANALYSIS`, `CONCLUSIONS`, `REFERENCES` headers → renders as styled `h3` with a ruled separator
+- Numbered items (`1. text`) → flex row with blue circle pill number
+- `REFERENCES` blocks → indented with left border, muted color
+- Inline `[PaperN]` legacy badges still rendered (test backward-compat preserved)
+
+All 34 frontend tests pass after the change.
+
+---
+
 ## What Was Not Changed
 
 - **Async Supabase client**: The `supabase` Python SDK's async client (`acreate_client`) would require restructuring the entire `db.py` module and all agent constructors. The `asyncio.to_thread` fix achieves the same non-blocking benefit with less risk of introducing initialization-order bugs.

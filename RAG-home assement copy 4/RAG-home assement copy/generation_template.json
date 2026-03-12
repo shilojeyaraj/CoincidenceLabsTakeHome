@@ -1,0 +1,97 @@
+{
+  "template_id": "ind_module2_pharmacology",
+  "title": "IND Module 2.6.2 — Pharmacology Written Summary",
+  "regulatory_framework": {
+    "guideline": "ICH M4S(R2) — The Common Technical Document: Nonclinical",
+    "cfr_reference": "21 CFR 312.23(a)(8) — Pharmacology and Toxicology Information",
+    "note": "This template follows the CTD Module 2.6.2 structure for the Pharmacology Written Summary, adapted for a BRD4-targeted investigational compound."
+  },
+  "instructions": "Generate a pharmacology written summary for an IND submission based on the provided source document. Follow the CTD section numbering exactly. Every factual claim must include an inline citation [N] mapping to a specific location in the source PDF. If the source document does not contain sufficient information for a section, mark it as [INSUFFICIENT DATA — describe what is missing]. Use formal regulatory language appropriate for FDA submission.",
+  "sections": [
+    {
+      "id": "2.6.2.1",
+      "heading": "Brief Summary",
+      "guidance": "Provide a concise overview of the pharmacological profile of BRD4 as a therapeutic target. Summarize the mechanism of action, key pharmacological findings, and the rationale for clinical development. Reference 21 CFR 312.23(a)(8)(i).",
+      "subsections": []
+    },
+    {
+      "id": "2.6.2.2",
+      "heading": "Primary Pharmacodynamics",
+      "guidance": "Describe the primary pharmacodynamic effects of BRD4 inhibition. Per ICH S7A, include: target engagement (BD1/BD2 bromodomain binding), downstream effects on gene transcription (MYC, NF-κB), and the relationship between BRD4 inhibition and disease modification.",
+      "subsections": [
+        {
+          "id": "2.6.2.2.1",
+          "heading": "Mechanism of Action",
+          "guidance": "Describe BRD4 domain structure (BD1, BD2, CTD), acetylated lysine recognition, and the functional consequences of BRD4 inhibition on chromatin dynamics and transcriptional regulation. Include protein-protein interactions relevant to pharmacology."
+        },
+        {
+          "id": "2.6.2.2.2",
+          "heading": "In Vitro Pharmacology",
+          "guidance": "Summarize in vitro activity data for BRD4 inhibitors. Include IC50/EC50 values, selectivity ratios (BD1 vs BD2), and binding affinity data (Ki/Kd). Organize by compound class: pan-BET, BD1-selective, BD2-selective. Present quantitative data with proper units."
+        },
+        {
+          "id": "2.6.2.2.3",
+          "heading": "Structure-Activity Relationships",
+          "guidance": "Describe key SAR findings across compound series. Include chemical scaffolds (thienotriazolodiazepines, benzimidazoles, quinolines, etc.) and how structural modifications affect potency and selectivity."
+        }
+      ]
+    },
+    {
+      "id": "2.6.2.3",
+      "heading": "Secondary Pharmacodynamics",
+      "guidance": "Describe pharmacological effects beyond the primary target. Include dual/multi-target inhibitors (e.g., AR/BET dual inhibitors) and off-target BET family activity (BRD2, BRD3, BRDT). Reference selectivity concerns per ICH S7A.",
+      "subsections": []
+    },
+    {
+      "id": "2.6.2.4",
+      "heading": "Safety Pharmacology",
+      "guidance": "Per ICH S7A and 21 CFR 312.23(a)(8)(i), summarize known safety findings from clinical trials. Include dose-limiting toxicities (thrombocytopenia, diarrhea, hyperbilirubinemia), immune-related effects, and how domain selectivity (BD1 vs BD2) impacts the safety profile. Reference specific clinical trial data (NCT numbers).",
+      "subsections": []
+    },
+    {
+      "id": "2.6.2.5",
+      "heading": "Pharmacodynamic Drug Interactions",
+      "guidance": "Describe known or potential pharmacodynamic interactions. Include resistance mechanisms that involve pathway compensation (WNT/β-catenin, Hedgehog signaling) and combination strategies. Per ICH S7A, note any interactions that could affect the therapeutic index.",
+      "subsections": [
+        {
+          "id": "2.6.2.5.1",
+          "heading": "Resistance Mechanisms",
+          "guidance": "Describe mechanisms of acquired and intrinsic resistance to BRD4 inhibitors: BRD4 phosphorylation (CK2-mediated, CDK9-mediated), protein stability regulation (SPOP, DUB3), autophagy-mediated resistance (AMPK/ULK1), and pathway compensation. Include specific molecular details and disease contexts."
+        },
+        {
+          "id": "2.6.2.5.2",
+          "heading": "Strategies to Overcome Resistance",
+          "guidance": "Describe approaches to address resistance: PROTAC degraders (ARV-771, MZ1, dBET1, etc.), molecular glues, antibody-PROTAC conjugates. Include degradation potency data (DC50/EC50) and E3 ligase recruitment strategies (CRBN vs VHL)."
+        }
+      ]
+    },
+    {
+      "id": "2.6.2.6",
+      "heading": "Clinical Trial Summary",
+      "guidance": "Per 21 CFR 312.23(a)(8)(iv), provide a tabular and narrative summary of clinical experience with BRD4 inhibitors.",
+      "subsections": [
+        {
+          "id": "2.6.2.6.1",
+          "heading": "Completed Clinical Studies",
+          "guidance": "List compounds with COMPLETED trial status. For each: compound name (alias), NCT number(s), phase, indication(s), sponsor, and key safety/efficacy outcomes. Cross-reference with Section 2.6.2.4 safety findings."
+        },
+        {
+          "id": "2.6.2.6.2",
+          "heading": "Ongoing Clinical Studies",
+          "guidance": "List compounds in RECRUITING or ACTIVE trials. Include NCT numbers, phases, target indications, and sponsors. Note biomarker-driven enrollment strategies (e.g., MYC-high, NUT-fusion)."
+        },
+        {
+          "id": "2.6.2.6.3",
+          "heading": "Terminated and Withdrawn Studies",
+          "guidance": "List TERMINATED and WITHDRAWN trials. Include reasons for discontinuation (safety, futility, strategic). Reference specific compounds: BAY 1238097 (NCT02369029), OTX-015, I-BET151 (NCT02630251)."
+        }
+      ]
+    },
+    {
+      "id": "2.6.2.7",
+      "heading": "Discussion and Conclusions",
+      "guidance": "Synthesize findings across sections. Assess the overall pharmacological profile of BRD4 as a therapeutic target. Identify the most promising development strategies (domain-selective inhibition, PROTAC degradation) and remaining gaps in pharmacological characterization. Per 21 CFR 312.23(a)(8), conclude with a risk-benefit assessment for proceeding to clinical investigation.",
+      "subsections": []
+    }
+  ]
+}

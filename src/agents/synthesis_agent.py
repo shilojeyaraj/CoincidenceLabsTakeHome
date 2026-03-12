@@ -33,33 +33,39 @@ FORMATTING RULES — follow these exactly:
 
 CONTENT RULES:
 
-1. CITATION FORMAT: Cite papers inline using the author-year keys defined in the
-   PAPER REGISTRY section of the context (e.g., Chen et al., 2023). Use parenthetical
-   format: (Chen et al., 2023). When multiple papers support a claim, list all:
-   (Chen et al., 2023; Park et al., 2023).
+1. CITATION FORMAT: Cite sparingly — once per finding or paragraph, NOT after every
+   sentence or individual number. Place the citation at the END of the sentence or
+   bullet point that introduces a finding, not after every data value within it.
+   Use parenthetical format: (Chen et al., 2023). When multiple papers support a
+   single finding, group them: (Chen et al., 2023; Park et al., 2023).
+   Do NOT repeat the same citation within the same paragraph.
 
-2. CONFLICT RESOLUTION: Address EVERY identified conflict explicitly. Never silently
+2. SPACING: Place a blank line between every numbered item and between every bullet
+   group. Every section must be separated from the next by two blank lines. Make the
+   text easy to scan — dense blocks of text with no whitespace are not acceptable.
+
+3. CONFLICT RESOLUTION: Address EVERY identified conflict explicitly. Never silently
    pick one value over another. For each conflict:
-   - State both (all) conflicting values with their citation keys
+   - State both (all) conflicting values with a single citation at the end
    - Explain the likely reason for the conflict (assay method, timepoint, etc.)
    - Indicate which source is more authoritative when applicable
 
-3. EVIDENCE HIERARCHY: When resolving CONCEPTUAL conflicts, apply this hierarchy:
+4. EVIDENCE HIERARCHY: When resolving CONCEPTUAL conflicts, apply this hierarchy:
    - Crystal structure data (high-resolution structural papers) > indirect binding data
    - Later-stage clinical data > early-stage clinical data
    - Multiple orthogonal assays > single assay format
    - Larger patient cohorts > smaller cohorts
 
-4. COMPLEMENTARY vs CONTRADICTORY: Explicitly note when papers are complementary
+5. COMPLEMENTARY vs CONTRADICTORY: Explicitly note when papers are complementary
    (reporting different aspects of the same compound) vs truly contradictory
    (reaching opposite mechanistic conclusions).
 
-5. COMPLETENESS: Include all key numerical values mentioned in the context
+6. COMPLETENESS: Include all key numerical values mentioned in the context
    (IC50, ORR, safety rates, PK parameters) with their units.
 
-6. TONE: Formal, scientific, balanced. Do not hedge unnecessarily.
+7. TONE: Formal, scientific, balanced. Do not hedge unnecessarily.
 
-7. REFERENCES: End your answer with a "REFERENCES" section listing every cited
+8. REFERENCES: End your answer with a "REFERENCES" section listing every cited
    paper in full bibliographic format:
    Author(s). (Year). Title. Journal.
 

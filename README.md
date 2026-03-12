@@ -7,54 +7,312 @@ A production-quality agentic RAG system that answers questions about NVX-0228 by
 
 ## Table of Contents
 
-1. [System Architecture](#system-architecture)
-2. [Agentic Design](#agentic-design)
-3. [Context Management](#context-management)
-4. [Conflict Handling](#conflict-handling)
-5. [Tech Stack & Trade-offs](#tech-stack--trade-offs)
-6. [Setup & Running](#setup--running)
-7. [Testing](#testing)
-8. [Example Outputs](#example-outputs)
-9. [Bonus: IND Template Generation](#bonus-ind-template-generation)
+1. [Design Q&A](#design-qa)
+2. [System Architecture](#system-architecture)
+3. [Agentic Design](#agentic-design)
+4. [Context Management](#context-management)
+5. [Conflict Handling](#conflict-handling)
+6. [Tech Stack & Trade-offs](#tech-stack--trade-offs)
+7. [Setup & Running](#setup--running)
+8. [Testing](#testing)
+9. [Example Outputs](#example-outputs)
+10. [Bonus: IND Template Generation](#bonus-ind-template-generation)
+
+---
+
+## Design Q&A
+
+These are the four core design questions, answered in my own words with reasoning from how the system actually behaves in practice.
+
+---
+
+### Q1: How do you manage context? The papers total ~40 chunks — too much to pass everything into a single LLM call.
+
+The 40-chunk problem was the first design constraint I worked through. My answer was a three-tier architecture — **Hot / Warm / Cold** — rather than either passing everything or truncating arbitrarily.
+
+**The core insight:** not all context is equal, and context has a natural lifecycle.
+
+- **COLD** is what lives in Supabase. Every chunk from every paper is stored as a pgvector embedding. Nothing is thrown away — it's just not in the LLM's context window yet.
+- **WARM** is a pre-built LLM summary for each paper, generated at ingest time and stored in the `paper_summaries` table. Each PaperAgent gets this for free at query time with no additional LLM call. It tells the agent "here is what this paper is broadly about" before it even fetches any chunks.
+- **HOT** is what actually goes into a given LLM call: `TOP_K_PER_PAPER = 3` chunks (retrieved by cosine similarity) plus the warm summary. For a 5-paper system that's a maximum of 15 chunks + 5 summaries visible at any one time — well within token limits.
+
+What's clever about this structure is that the warm tier is what enables the ConflictAgent to reason across papers without ever receiving all 40 chunks. It gets 5 warm summaries + the extracted claim lists from each PaperAgent. The full chunks stay cold unless a CONCEPTUAL conflict triggers expansion.
+
+This maps directly to how production memory systems work. Letta (MemGPT) has in-context blocks (hot), recall vector store (warm), and archival storage (cold). Mem0 keeps ~7K tokens active by constantly deciding what to ADD/UPDATE/DELETE. AutoGen's `TextMessageCompressor` reduced a 4,019-token conversation to 215 tokens using similar principles. I built a domain-specific version of the same idea.
+
+```
+                  Per LLM call budget
+                  ┌────────────────────────────────────────┐
+PaperAgent call:  │  warm_summary (1 paper) + 3 chunks     │  ~800–1200 tokens
+                  └────────────────────────────────────────┘
+
+ConflictAgent:    │  5 claim lists (no raw chunks)          │  ~400–600 tokens
+                  └────────────────────────────────────────┘
+
+SynthesisAgent:   │  5 warm summaries + 15 chunks + claims  │  ~3000–4000 tokens
+                  └────────────────────────────────────────┘
+```
+
+The synthesis call is the largest but still bounded — chunks are truncated to `CHUNK_CONTENT_MAX_CHARS = 1200` and I set `SYNTHESIS_MAX_TOKENS = 2500` to control TTFT without cutting off the references section.
+
+---
+
+### Q2: How do you ensure evidence is pulled from multiple papers, not just the most similar one?
+
+This was the most important architectural decision. The naive approach — embed the query, run a single global similarity search returning the top 15 chunks — would fail completely. If Paper 2 is semantically closest to "What is the IC50?", a global search might return 12 of its chunks and 1 each from two others. You'd miss the 15.3 nM value from Paper 3 entirely.
+
+**My fix: per-paper retrieval with mandatory participation.**
+
+Each of the 5 PaperAgents calls the `match_chunks` Supabase RPC with its own `paper_id` as a filter:
+
+```sql
+SELECT id, content, section, page,
+       1 - (embedding <=> query_embedding) AS similarity
+FROM chunks
+WHERE paper_id = $paper_id          -- ← mandatory filter before similarity
+ORDER BY similarity DESC
+LIMIT $match_count
+```
+
+This guarantees every paper contributes exactly `TOP_K_PER_PAPER = 3` chunks, regardless of whether it's the most similar paper overall. The 5 agents run in parallel via LangGraph's `Send` API so there's no latency penalty.
+
+The effect is visible in every trace — all 5 papers are always cited:
+
+```
+--- Papers Cited ---
+  paper1_nvx0228_novel_inhibitor
+  paper2_nvx0228_pharmacokinetics
+  paper3_brd4_hematologic_comparative
+  paper4_nvx0228_structural_basis
+  paper5_nvx0228_updated_phase1
+```
+
+This is also the reason CONCEPTUAL conflicts get detected reliably. The mechanism-of-action conflict between Paper 1 (competitive inhibitor) and Paper 4 (allosteric modulator) only surfaces because both papers are forced to contribute. A global search for "mechanism of action" might return mostly Paper 1 chunks — Paper 4's structural data would never appear.
+
+**One more layer: claim extraction is query-aware.** Each PaperAgent passes the user's original question to the extraction LLM alongside the retrieved chunks. The model is told to extract claims *relevant to the research question*. So for an IC50 question, it extracts IC50 values. For a toxicity question, it extracts adverse event rates. The same chunk corpus produces different structured claim outputs depending on what you asked.
+
+---
+
+### Q3: When the system discovers a conflict, how does it respond?
+
+Conflicts are not all the same, and the response depends on the type. I defined five types in `ConflictType`:
+
+| Type | What it means | System response |
+|------|--------------|-----------------|
+| `ASSAY_VARIABILITY` | Same target, different measurement methods (TR-FRET vs AlphaScreen vs ITC) | Classify and explain in synthesis |
+| `METHODOLOGY` | Different protocols, patient populations, animal models | Classify and explain in synthesis |
+| `CONCEPTUAL` | Fundamentally different mechanistic interpretations — both cannot be correct | **Trigger context expansion** |
+| `EVOLVING_DATA` | Same trial at different data cuts (same NCT number, different timepoints) | Classify as non-conflict, explain timeline |
+| `NON_CONFLICT` | Values agree within expected variation | Pass through silently |
+
+**The CONCEPTUAL path is where the system's behavior actually changes:**
+
+```
+ConflictAgent detects CONCEPTUAL: mechanism_of_action
+    │
+    ▼  immediately, before synthesis runs
+_expand_context() fetches EXPANSION_TOP_K=5 chunks per paper
+(instead of the original TOP_K_PER_PAPER=3)
+    │
+    ▼
+Deduplicate by chunk ID against already-retrieved set
+    │
+    ▼
+New chunks merged into graph state via operator.add
+    │
+    ▼
+SynthesisAgent now receives 5 chunks/paper instead of 3
+— the structural data from Paper 4 (1.8Å crystal structure,
+  5.2Å displacement from acetyl-lysine pocket) is now visible
+```
+
+This shows up in the trace as additional `ConflictAgent.ContextExpansion` steps and sets `context_expansion_triggered: true` in the output:
+
+```
+[ConflictAgent] conflict_agent: 3 conflicts classified:
+  [ic50_bd1_nm:ASSAY_VARIABILITY, mechanism_of_action:CONCEPTUAL,
+   thrombocytopenia_rate_pct:METHODOLOGY];
+  context_expansion_triggered=True (1 CONCEPTUAL) (5713ms)
+
+[ConflictAgent.ContextExpansion] context_expansion_paper1: Fetched 5 chunks, 2 new (127ms)
+[ConflictAgent.ContextExpansion] context_expansion_paper4: Fetched 5 chunks, 2 new (93ms)
+[ConflictAgent.ContextExpansion] context_expansion_paper2: Fetched 5 chunks, 2 new (80ms)
+[ConflictAgent.ContextExpansion] context_expansion_paper3: Fetched 5 chunks, 2 new (79ms)
+[ConflictAgent.ContextExpansion] context_expansion_paper5: Fetched 5 chunks, 2 new (80ms)
+```
+
+The total trace goes from 7 steps (no expansion) to 12 steps (with expansion). The SynthesisAgent then explicitly addresses the conflict in its output rather than picking a winner:
+
+```
+CONFLICT ANALYSIS
+
+The mechanism of action of NVX-0228 is a subject of debate. Chen et al. (2023)
+describe it as a competitive inhibitor, while Kim et al. (2023) present evidence
+for an allosteric modulation mechanism. This conceptual conflict suggests that
+further studies are necessary to clarify the binding mode and functional
+implications of NVX-0228.
+```
+
+For the hardest case in the dataset — Paper 1 and Paper 5 both reporting from the same trial NCT05123456 at different data cuts — the ConflictAgent is prompted to check NCT numbers and publication dates before classifying. It correctly identifies this as `EVOLVING_DATA`, not a genuine conflict.
+
+---
+
+### Q4: How is the work decomposed? What are the boundaries between components?
+
+I decomposed into agents based on a simple rule: **each agent owns exactly one paper or exactly one cross-paper concern, and agents cannot call each other directly.** All communication goes through LangGraph's shared graph state.
+
+```
+Component               Owns                          Input               Output
+─────────────────────────────────────────────────────────────────────────────────
+PaperAgent (×5)         One paper each                query + paper_id    PaperResult
+                        Supabase fetch + claim LLM                        (chunks + claims)
+
+ConflictAgent (×1)      Cross-paper conflict          all PaperResults    conflicts[]
+                        detection + expansion         + query             + expansion chunks
+
+SynthesisAgent (×1)     Final answer generation       all PaperResults    answer string
+                                                      + conflicts[]
+
+INDTemplateAgent (×7)   One IND section each          PaperResults        INDSectionResult
+                        (bonus)                       + conflicts[]
+```
+
+**Why these exact boundaries?**
+
+PaperAgents are isolated so they can run in parallel without coordination. They don't know about each other. They don't know about conflicts. They just find the most relevant evidence from their one paper and extract structured claims from it.
+
+ConflictAgent is sequential by necessity — it needs all 5 PaperResults before it can group claims by property across papers. But within ConflictAgent, the per-property classification calls run in parallel via `asyncio.gather`. The expansion fetches also run in parallel. Sequential at the graph level, parallel internally.
+
+SynthesisAgent is sequential by necessity — it needs the conflict report. But it's the only agent that sees the full picture: all chunks, all summaries, all conflicts. It's the only one with `SYNTHESIS_MAX_TOKENS = 2500` because it produces the longest output.
+
+**Why LangGraph specifically?**
+
+The parallel fan-out to 5 PaperAgents, the fan-in back into a single ConflictAgent, and the conditional expansion branch (only runs when CONCEPTUAL fires) are exactly the patterns LangGraph's `Send` API and `Annotated[list, operator.add]` reducers were built for. Writing this without the framework would require manual `asyncio.gather` with state merging, checkpointing per step for fault tolerance, and conditional edge logic — all of which LangGraph handles declaratively.
+
+What I deliberately did NOT use from LangChain: retriever abstractions, LCEL chains, vector store wrappers. These would hide the per-paper Supabase filtering logic (the single most important retrieval decision in the system) and make the trace harder to read. The raw OpenAI SDK inside each agent node keeps every LLM call explicit and inspectable.
+
+**Agent communication example — how ConflictAgent output changes SynthesisAgent behavior:**
+
+```python
+# ConflictAgent sets context_expansion_triggered in state
+return {
+    "conflicts": conflicts,
+    "context_expansion_triggered": len(expansion_traces) > 0,
+    "paper_results": expansion_results,   # operator.add merges expansion chunks in
+    "trace": all_trace,
+}
+
+# SynthesisAgent receives the expanded paper_results automatically
+# — it doesn't know whether expansion ran, it just uses whatever is in state
+async def synthesis_node(state: GraphState) -> dict:
+    answer, trace = await SynthesisAgent().run(
+        query=state["query"],
+        paper_results=state["paper_results"],  # may contain 3 or 5 chunks/paper
+        conflicts=state["conflicts"],
+    )
+```
+
+The SynthesisAgent doesn't have a conditional branch for "did expansion run?" — it just consumes whatever context is in the state. ConflictAgent shapes what state looks like, and SynthesisAgent benefits from it automatically.
 
 ---
 
 ## System Architecture
 
+### Query Pipeline
+
 ```
-User Query
+User Query (any NVX-0228 question)
     │
-    ▼
-┌─────────────────────────────────────────────────────┐
-│  LangGraph StateGraph Orchestrator                   │
-│                                                      │
-│  START ──► route_to_papers ──────────────────────►  │
-│                │                                     │
-│     ┌──────────┼──────────┐                          │
-│     ▼          ▼          ▼  (parallel via Send API) │
-│  Paper 1    Paper 2  ... Paper 5                     │
-│  Agent      Agent        Agent                       │
-│     └──────────┼──────────┘                          │
-│                │  fan-in (operator.add reducer)       │
-│                ▼                                     │
-│         ConflictAgent                               │
-│          │         │                                 │
-│      if CONCEPTUAL  │                               │
-│          │         │                                 │
-│    context expansion  │                             │
-│    (Supabase fetch)  │                             │
-│          │         │                                 │
-│          └────►  SynthesisAgent                     │
-│                      │                              │
-│            [optional fan-out]                       │
-│                      │                              │
-│     INDSection ×7  (parallel)                       │
-│                      │                              │
-│                    END                              │
-└─────────────────────────────────────────────────────┘
+    ▼  text-embedding-3-small (1536-dim)
+Query Embedding  ──────────────────────────────────────────────────────────────┐
+    │                                                                           │
+    ▼                                                                           │
+┌─────────────────────────────────────────────────────────────────────────────┐│
+│  LangGraph StateGraph Orchestrator                                           ││
+│                                                                              ││
+│  START ──► route_to_papers ──────────────────────────────────────────────►  ││
+│                │                                                             ││
+│     ┌──────────┼──────────┬──────────┬──────────┐  parallel via Send API   ││
+│     ▼          ▼          ▼          ▼          ▼                           ││
+│  Paper 1    Paper 2    Paper 3    Paper 4    Paper 5   ◄────────────────────┘│
+│  Agent      Agent      Agent      Agent      Agent                           │
+│  [pgvector  [pgvector  [pgvector  [pgvector  [pgvector                       │
+│   RPC +      RPC +      RPC +      RPC +      RPC +                         │
+│   LLM]       LLM]       LLM]       LLM]       LLM]                          │
+│     └──────────┴──────────┴──────────┴──────────┘                           │
+│                │  fan-in: operator.add reducer merges all 5 results          │
+│                ▼                                                             │
+│          ConflictAgent                                                       │
+│           │         │                                                        │
+│       if CONCEPTUAL │                                                        │
+│           │         │                                                        │
+│     context expansion                                                        │
+│     (fetch more chunks                                                       │
+│      via Supabase)   │                                                       │
+│           │         │                                                        │
+│           └────►  SynthesisAgent                                             │
+│                       │                                                      │
+│             [optional fan-out]                                               │
+│                       │                                                      │
+│      INDSection ×7  (parallel)                                               │
+│                       │                                                      │
+│                     END                                                      │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 The graph state uses `Annotated[list, operator.add]` reducers for `paper_results`, `trace`, and `ind_results` — this is what enables the parallel fan-in: each `paper_node` appends its result to the shared list, and LangGraph merges them automatically when all parallel nodes complete.
+
+### Vector Storage & Retrieval
+
+```
+INGEST TIME (once, via seed_papers.py)
+────────────────────────────────────────────────────────────────
+  Paper JSON  ──► chunk splitter  ──► text-embedding-3-small
+                                            │
+                                            ▼
+                                  Supabase pgvector
+                                  chunks table
+                                  ┌────────────────────────────┐
+                                  │ id │ paper_id │ content │   │
+                                  │    │          │ section │   │
+                                  │    │          │ embedding◄──┘
+                                  │    │          │ (vector  │
+                                  │    │          │  1536-d) │
+                                  └────────────────────────────┘
+                                  ivfflat index on embedding col
+
+  Also stored:  paper_summaries table  (one row per paper)
+                ┌──────────────────────────────────────────────┐
+                │ paper_id │ title │ authors │ date │ journal   │
+                │          │ summary (LLM-generated warm cache) │
+                └──────────────────────────────────────────────┘
+
+QUERY TIME (per query, per paper — runs in parallel for all 5)
+────────────────────────────────────────────────────────────────
+  User Query
+      │
+      ▼  text-embedding-3-small (lru_cache — 5 agents share 1 API call)
+  Query Embedding
+      │
+      ▼
+  match_chunks(query_embedding, paper_id, match_count) RPC
+  ┌──────────────────────────────────────────────────────┐
+  │  SELECT ... FROM chunks                               │
+  │  WHERE paper_id = $paper_id                           │  ← per-paper filter
+  │  ORDER BY embedding <=> $query_embedding              │  ← cosine similarity
+  │  LIMIT $match_count                                   │
+  └──────────────────────────────────────────────────────┘
+      │
+      ▼  TOP_K_PER_PAPER=3 chunks  (EXPANSION_TOP_K=5 if CONCEPTUAL conflict)
+  Retrieved chunks + warm summary
+      │
+      ▼  gpt-4o-mini
+  Structured claims: [{property, value, context, confidence}, ...]
+```
+
+**Why per-paper retrieval instead of global top-k:** A global similarity search would return all top chunks from whichever single paper happens to be most similar to the query — the system would miss evidence from the other 4 papers entirely. Per-paper retrieval guarantees every paper contributes regardless of relative cosine similarity. This is critical for conflict detection: you need all 4 IC50 values across all 4 papers, not just the 3 chunks from the most similar one.
+
+**The system handles any question** — not just the 5 test queries. Vector similarity search retrieves the most relevant chunks from each paper for whatever you ask. Try `py -3 main.py --query "What is the BD1/BD2 selectivity ratio?"` or `py -3 main.py --query "What dose was used in Phase II?"` — the retrieval and conflict detection adapt automatically.
 
 ---
 
@@ -100,9 +358,9 @@ The LLM is given paper metadata (NCT numbers, publication dates, sample sizes vi
 **File:** `src/agents/synthesis_agent.py`
 
 Receives all paper results (including expansion chunks) and the full conflict report. Produces a final answer that:
-- Cites sources inline as `[Paper1]`–`[Paper5]`
-- Addresses every conflict explicitly with resolution reasoning
-- Never silently picks a winner
+- Cites sources inline in author-year format: `(Chen et al., 2023)` — built from paper metadata stored in Supabase at ingest time
+- Ends with a full REFERENCES section listing every cited paper with authors, year, title, and journal
+- Addresses every conflict explicitly with resolution reasoning; never silently picks a winner
 - For CONCEPTUAL conflicts (mechanism of action): explains both positions and notes which has stronger evidence (paper4's 1.8Å crystal structure > paper1's limited co-crystallography)
 
 #### INDTemplateAgent (×7 sections, parallel) — Bonus
@@ -332,22 +590,22 @@ Pre-run outputs for all 5 test queries are in `outputs/`. Each output is a `Quer
 ```json
 {
   "query": "What is the IC50 of NVX-0228?",
-  "answer": "...[Paper1]...[Paper2]...",
+  "answer": "SUMMARY\n\nThe IC50 values for NVX-0228 range from 8.5–15.3 nM across four studies (Chen et al., 2023; Liu et al., 2024; Williams et al., 2024; Rodriguez et al., 2025)...\n\nREFERENCES\n\nChen, W. et al. (2023). NVX-0228: A Novel BRD4 Inhibitor...",
   "conflicts": [
     {
-      "property": "IC50 (BRD4-BD1)",
+      "property": "ic50_bd1_nm",
       "conflict_type": "ASSAY_VARIABILITY",
-      "papers_involved": ["paper1", "paper2", "paper3", "paper5"],
-      "reasoning": "...",
-      "resolution": "..."
+      "papers_involved": ["paper1_nvx0228_novel_inhibitor", "paper2_nvx0228_pharmacokinetics", ...],
+      "reasoning": "Values range 8.5–15.3 nM; variation attributable to TR-FRET vs AlphaScreen vs validated central lab assay formats",
+      "resolution": "Assay standardization recommended"
     }
   ],
-  "papers_cited": ["paper1", "paper2", "paper3", "paper4", "paper5"],
+  "papers_cited": ["paper1_nvx0228_novel_inhibitor", "paper2_nvx0228_pharmacokinetics", ...],
   "context_expansion_triggered": false,
   "trace": [
-    {"agent": "PaperAgent", "step": "paper1", ...},
-    {"agent": "ConflictAgent", ...},
-    {"agent": "SynthesisAgent", ...}
+    {"agent": "PaperAgent", "step": "paper_agent_paper1_nvx0228_novel_inhibitor", "latency_ms": 11397, ...},
+    {"agent": "ConflictAgent", "step": "conflict_agent", ...},
+    {"agent": "SynthesisAgent", "step": "synthesis_agent", ...}
   ]
 }
 ```

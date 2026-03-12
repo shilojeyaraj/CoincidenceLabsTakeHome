@@ -31,7 +31,8 @@
       "Bash(cd C:/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome && python -c \"\nimport asyncio\nfrom src.orchestrator import run_query\n\nasync def main\\(\\):\n    import time\n    start = time.time\\(\\)\n    result = await run_query\\('What is the IC50 of NVX-0228?'\\)\n    elapsed = time.time\\(\\) - start\n    print\\(f'Total time: {elapsed:.1f}s'\\)\n    print\\(f'Context expansion triggered: {result.context_expansion_triggered}'\\)\n    print\\(f'Trace \\({len\\(result.trace\\)} steps\\):'\\)\n    for t in result.trace:\n        print\\(f'  [{t.agent}] {t.step}: {t.latency_ms:.0f}ms'\\)\n\nasyncio.run\\(main\\(\\)\\)\n\" 2>&1)",
       "Bash(cd C:/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome && python -m pytest tests/ -x -q 2>&1)",
       "Bash(cd C:/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome && python -m pytest tests/ -q 2>&1)",
-      "Bash(python main.py --run-all 2>&1)"
+      "Bash(python main.py --run-all 2>&1)",
+      "Bash(cd \"C:/Users/shilo/Coincidence-Take_Home/CoincidenceLabsTakeHome/frontend\" && npm test -- --watchAll=false 2>&1)"
     ]
   }
 }
