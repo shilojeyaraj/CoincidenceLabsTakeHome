@@ -18,19 +18,34 @@ _SYNTHESIS_SYSTEM = """\
 You are a senior pharmaceutical research analyst synthesizing findings from multiple
 scientific papers about NVX-0228, a BD1-selective BRD4 inhibitor.
 
-Your synthesis MUST:
+FORMATTING RULES — follow these exactly:
+- Use PLAIN TEXT only. Do NOT use markdown syntax of any kind.
+- Do NOT use asterisks (**bold**), underscores (_italic_), hashtags (# Header),
+  backticks, or any other markdown or LaTeX symbols.
+- Section headings must be written in ALL CAPS on their own line, followed by a
+  blank line. Example:
+      SUMMARY
 
-1. CITATION FORMAT: Cite papers inline as [Paper1], [Paper2], [Paper3], [Paper4],
-   [Paper5] corresponding to the papers provided in the context.
+      Text goes here.
+
+- Use numbered lists (1. 2. 3.) and dashes (-) for bullet points.
+- Separate sections with a blank line.
+
+CONTENT RULES:
+
+1. CITATION FORMAT: Cite papers inline using the author-year keys defined in the
+   PAPER REGISTRY section of the context (e.g., Chen et al., 2023). Use parenthetical
+   format: (Chen et al., 2023). When multiple papers support a claim, list all:
+   (Chen et al., 2023; Park et al., 2023).
 
 2. CONFLICT RESOLUTION: Address EVERY identified conflict explicitly. Never silently
    pick one value over another. For each conflict:
-   - State both (all) conflicting values
+   - State both (all) conflicting values with their citation keys
    - Explain the likely reason for the conflict (assay method, timepoint, etc.)
    - Indicate which source is more authoritative when applicable
 
 3. EVIDENCE HIERARCHY: When resolving CONCEPTUAL conflicts, apply this hierarchy:
-   - Crystal structure data (1.8 Å resolution from Paper4) > indirect binding data
+   - Crystal structure data (high-resolution structural papers) > indirect binding data
    - Later-stage clinical data > early-stage clinical data
    - Multiple orthogonal assays > single assay format
    - Larger patient cohorts > smaller cohorts
@@ -44,7 +59,11 @@ Your synthesis MUST:
 
 6. TONE: Formal, scientific, balanced. Do not hedge unnecessarily.
 
-Structure your answer with: Summary → Key Findings → Conflict Analysis → Conclusions
+7. REFERENCES: End your answer with a "REFERENCES" section listing every cited
+   paper in full bibliographic format:
+   Author(s). (Year). Title. Journal.
+
+Structure: SUMMARY / KEY FINDINGS / CONFLICT ANALYSIS / CONCLUSIONS / REFERENCES
 """
 
 
@@ -90,6 +109,66 @@ class SynthesisAgent:
 
         return answer, trace
 
+    @staticmethod
+    def _make_citation_key(pr: PaperResult) -> str:
+        """
+        Build an author-year citation key from paper metadata.
+        Falls back to a title-slug if author/date are unavailable.
+
+        Examples:
+            "Chen et al., 2023"
+            "Park, 2024"
+            "NVX-0228 Novel Inhibitor"
+        """
+        authors: list[str] = []
+        year: str = "n.d."
+
+        # Authors and date live on the first RetrievedChunk's metadata
+        if pr.chunks:
+            rc = pr.chunks[0]
+            if rc.paper_authors:
+                authors = rc.paper_authors
+            if rc.publication_date:
+                year = str(rc.publication_date.year)
+
+        if authors:
+            # "Chen, W." → "Chen"
+            first_last = authors[0].split(",")[0].strip()
+            suffix = " et al." if len(authors) > 1 else ""
+            return f"{first_last}{suffix}, {year}"
+
+        # Fallback: derive a short slug from the paper title or paper_id
+        title = pr.paper_title or pr.paper_id.replace("_", " ")
+        words = title.split()
+        slug = " ".join(words[:4]) if len(words) > 4 else title
+        return f"{slug} ({year})"
+
+    @staticmethod
+    def _make_full_reference(pr: PaperResult, key: str) -> str:
+        """
+        Format a full bibliographic reference string.
+        Example: Chen, W., Rodriguez, M., Patel, S., Nakamura, T. (2023).
+                 NVX-0228: A Novel BRD4 Inhibitor. Journal of Medicinal Chemistry.
+        """
+        authors_str = "Unknown authors"
+        year = "n.d."
+        journal = ""
+
+        if pr.chunks:
+            rc = pr.chunks[0]
+            if rc.paper_authors:
+                authors_str = ", ".join(rc.paper_authors)
+            if rc.publication_date:
+                year = str(rc.publication_date.year)
+            if rc.journal:
+                journal = rc.journal
+
+        title = pr.paper_title or pr.paper_id.replace("_", " ")
+        parts = [f"{authors_str} ({year}). {title}."]
+        if journal:
+            parts.append(f" {journal}.")
+        return "".join(parts)
+
     def _build_context(
         self,
         paper_results: list[PaperResult],
@@ -98,11 +177,43 @@ class SynthesisAgent:
         """Build the full context block for the LLM prompt."""
         context_parts: list[str] = []
 
+        # Build citation keys (unique — deduplicate by paper_id)
+        seen_ids: set[str] = set()
+        unique_papers: list[PaperResult] = []
+        for pr in paper_results:
+            if pr.paper_id not in seen_ids:
+                seen_ids.add(pr.paper_id)
+                unique_papers.append(pr)
+
+        # Map paper_id → citation key
+        citation_map: dict[str, str] = {}
+        used_keys: set[str] = set()
+        for pr in unique_papers:
+            key = self._make_citation_key(pr)
+            # Disambiguate duplicate keys (e.g., two papers same first author + year)
+            if key in used_keys:
+                base = key
+                suffix_idx = 2
+                while key in used_keys:
+                    key = f"{base}{chr(96 + suffix_idx)}"  # ...2023b, 2023c
+                    suffix_idx += 1
+            used_keys.add(key)
+            citation_map[pr.paper_id] = key
+
+        # --- Paper registry block (LLM sees this to know how to cite) ---
+        registry_lines = ["=== PAPER REGISTRY (use these keys for in-text citations) ==="]
+        for pr in unique_papers:
+            key = citation_map[pr.paper_id]
+            ref = self._make_full_reference(pr, key)
+            registry_lines.append(f"[{key}] → {ref}")
+        context_parts.append("\n".join(registry_lines))
+        context_parts.append("")
+
         # --- Per-paper context ---
-        for i, pr in enumerate(paper_results, start=1):
-            paper_label = f"Paper{i}"
+        for pr in unique_papers:
+            key = citation_map[pr.paper_id]
             header = (
-                f"=== [{paper_label}] paper_id={pr.paper_id} "
+                f"=== [{key}] paper_id={pr.paper_id} "
                 f"title='{pr.paper_title or 'Unknown'}' ==="
             )
             context_parts.append(header)
@@ -130,14 +241,17 @@ class SynthesisAgent:
 
             context_parts.append("")
 
-        # --- Conflict summary ---
+        # --- Conflict summary (reference papers by citation key, not paper_id) ---
         if conflicts:
             context_parts.append("=== IDENTIFIED CONFLICTS ===")
             for conflict in conflicts:
+                involved_keys = [
+                    citation_map.get(pid, pid) for pid in conflict.papers_involved
+                ]
                 context_parts.append(
                     f"Property: {conflict.property}\n"
                     f"Type: {conflict.conflict_type.value}\n"
-                    f"Papers: {', '.join(conflict.papers_involved)}\n"
+                    f"Papers: {', '.join(involved_keys)}\n"
                     f"Reasoning: {conflict.reasoning}\n"
                     + (f"Resolution: {conflict.resolution}\n" if conflict.resolution else "")
                 )
@@ -153,9 +267,12 @@ class SynthesisAgent:
         Returns:
             (answer, tokens_used)
         """
+        # Count per-paper sections by matching the section delimiter "=== ["
+        # (excludes the registry header and conflict header which use different prefixes)
+        paper_count = context.count("paper_id=")
         user_message = (
             f"Research question: {query}\n\n"
-            f"Context from {context.count('=== [Paper')}-paper corpus:\n\n"
+            f"Context from {paper_count}-paper corpus:\n\n"
             f"{context}"
         )
 
